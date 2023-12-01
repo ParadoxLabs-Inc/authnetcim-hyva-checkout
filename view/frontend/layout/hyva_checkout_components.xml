@@ -5,6 +5,7 @@
             <block name="checkout.payment.method.authnetcim" as="authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml">
                 <arguments>
                     <argument name="magewire" xsi:type="object">\ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\Authnetcim</argument>
+                    <argument name="method_code" xsi:type="string">authnetcim</argument>
                 </arguments>
             </block>
         </referenceBlock>

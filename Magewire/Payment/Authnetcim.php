@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 /**
- * Copyright © 2015-present ParadoxLabs, Inc.
+ * Copyright © 2023-present ParadoxLabs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ use Hyva\Checkout\Model\Magewire\Component\EvaluationInterface;
 use Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory;
 use Hyva\Checkout\Model\Magewire\Component\EvaluationResultInterface;
 use Magento\Checkout\Model\Session as CheckoutSession;
-use Magento\Framework\View\LayoutInterface;
 use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magento\Quote\Model\ResourceModel\Quote\Payment;
@@ -33,6 +32,7 @@ use Magewirephp\Magewire\Component\Form;
 use ParadoxLabs\Authnetcim\Block\Form\Cc;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
+use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
 use ParadoxLabs\TokenBase\Api\CardRepositoryInterface;
 use ParadoxLabs\TokenBase\Helper\Data;
 use Rakit\Validation\Validator;
@@ -106,19 +106,14 @@ class Authnetcim extends Form implements EvaluationInterface
     protected $helper;
 
     /**
-     * @var \Magento\Framework\View\LayoutInterface
-     */
-    protected $layout;
-
-    /**
-     * @var \ParadoxLabs\Authnetcim\Block\Form\Cc
-     */
-    protected $formBlock;
-
-    /**
      * @var \Magento\Quote\Model\ResourceModel\Quote\Payment
      */
     protected $paymentResource;
+
+    /**
+     * @var \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm
+     */
+    protected $formViewModel;
 
     /**
      * @param \Rakit\Validation\Validator $validator
@@ -127,8 +122,8 @@ class Authnetcim extends Form implements EvaluationInterface
      * @param AcceptHostedService $acceptHostedService
      * @param \ParadoxLabs\TokenBase\Api\CardRepositoryInterface $cardRepository
      * @param \ParadoxLabs\TokenBase\Helper\Data $helper
-     * @param \Magento\Framework\View\LayoutInterface $layout
      * @param \Magento\Quote\Model\ResourceModel\Quote\Payment $paymentResource
+     * @param \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm $formViewModel
      */
     public function __construct(
         Validator $validator,
@@ -137,8 +132,8 @@ class Authnetcim extends Form implements EvaluationInterface
         AcceptHostedService $acceptHostedService,
         CardRepositoryInterface $cardRepository,
         Data $helper,
-        LayoutInterface $layout,
-        Payment $paymentResource
+        Payment $paymentResource,
+        PaymentForm $formViewModel
     ) {
         parent::__construct($validator);
 
@@ -146,9 +141,9 @@ class Authnetcim extends Form implements EvaluationInterface
         $this->acceptHostedService = $acceptHostedService;
         $this->cardRepository = $cardRepository;
         $this->helper = $helper;
-        $this->layout = $layout;
         $this->paymentResource = $paymentResource;
         $this->acceptCustomerService = $acceptCustomerService;
+        $this->formViewModel = $formViewModel;
     }
 
     /**
@@ -314,36 +309,6 @@ class Authnetcim extends Form implements EvaluationInterface
     }
 
     /**
-     * Get the active payment method instance
-     *
-     * @return \Magento\Payment\Model\MethodInterface
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    public function getMethod(): MethodInterface
-    {
-        // TODO: Make getMethod and getFormBlock private and move to a viewmodel
-        return $this->helper->getMethodInstance(self::METHOD_CODE);
-    }
-
-    /**
-     * Get the active payment method form block
-     *
-     * @return \ParadoxLabs\Authnetcim\Block\Form\Cc
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    public function getFormBlock(): Cc
-    {
-        if (!isset($this->formBlock)) {
-            $formBlock = $this->layout->createBlock(Cc::class);
-            $formBlock->setMethod($this->getMethod());
-
-            $this->formBlock = $formBlock;
-        }
-
-        return $this->formBlock;
-    }
-
-    /**
      * Determine whether checkout completion is allowed
      *
      * @param \Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory $factory
@@ -379,6 +344,28 @@ class Authnetcim extends Form implements EvaluationInterface
         }
 
         return false;
+    }
+
+    /**
+     * Get the active payment method instance
+     *
+     * @return \Magento\Payment\Model\MethodInterface
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    protected function getMethod(): MethodInterface
+    {
+        return $this->formViewModel->getMethod(self::METHOD_CODE);
+    }
+
+    /**
+     * Get the active payment method form block
+     *
+     * @return \ParadoxLabs\Authnetcim\Block\Form\Cc
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    protected function getFormBlock(): Cc
+    {
+        return $this->formViewModel->getFormBlock(self::METHOD_CODE);
     }
 
     /**
