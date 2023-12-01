@@ -9,5 +9,12 @@
                 </arguments>
             </block>
         </referenceBlock>
+        <referenceContainer name="before.body.end">
+            <block name="script-authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml">
+                <arguments>
+                    <argument name="method_code" xsi:type="string">authnetcim</argument>
+                </arguments>
+            </block>
+        </referenceContainer>
     </body>
 </page>

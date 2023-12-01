@@ -1,0 +1,213 @@
+<?php declare(strict_types=1);
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+
+$code = $escaper->escapeJs($block->getData('method_code'));
+?>
+<script>
+    'use strict';
+
+    const <?= $code ?>PaymentForm = ($el, $wire) => {
+        return {
+            storedCards: $wire.entangle('storedCards'),
+            selectedCard: $wire.entangle('selectedCard'),
+            communicatorActive: false,
+            iframeInitialized: false,
+            showHostedForm: true,
+            componentInitialized: false,
+            processingSave: false,
+            timeoutReloader: null,
+            timeoutCommunicator: null,
+            init: function() {
+                if (this.componentInitialized) {
+                    return;
+                }
+
+                window.addEventListener('message', this.handleCommunication.bind(this));
+                document.addEventListener('checkout:payment:method-activate', this.toggleOrderButton.bind(this));
+                document.addEventListener('<?= $code ?>InitHostedForm', this.loadHostedForm.bind(this));
+                this.$watch('selectedCard', this.changeSelectedCard.bind(this));
+
+                this.changeSelectedCard();
+
+                this.componentInitialized = true;
+            },
+            changeSelectedCard: function() {
+                this.showHostedForm = this.selectedCard === '';
+
+                if (this.iframeInitialized === false && this.showHostedForm === true) {
+                    // The initialized flag is to debounce and ensure we don't reinit unless absolutely necessary.
+                    this.resetHostedForm();
+                }
+
+                this.toggleOrderButton();
+            },
+            resetHostedForm: function() {
+                // TODO: Trigger agreement validation before loading form
+                clearTimeout(this.timeoutReloader);
+                clearTimeout(this.timeoutCommunicator);
+
+                $wire.call('initHostedForm');
+            },
+            toggleOrderButton: function(event) {
+                let method = event && event.detail
+                             ? event.detail.method
+                             : document.querySelector('input[name="payment-method-option"]:checked').value;
+
+                if (method === '<?= $code ?>' && this.showHostedForm) {
+                    document.querySelector('.btn-primary[x-bind="buttonPlaceOrder()"]').style.display = 'none';
+                } else {
+                    document.querySelector('.btn-primary[x-bind="buttonPlaceOrder()"]').style.display = 'block';
+                }
+            },
+            loadHostedForm: function(event) {
+                let data = event.detail;
+
+                var iframe = $el.querySelector('iframe');
+
+                var form = document.createElement('form');
+                form.target = iframe.name;
+                form.method = 'post';
+                form.action = data.iframeAction;
+
+                for (let fieldKey in data.iframeParams) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = fieldKey;
+                    input.value = data.iframeParams[fieldKey];
+                    form.appendChild(input);
+                }
+
+                $el.appendChild(form);
+                form.submit();
+
+                // Reload the hosted form when it expires
+                this.timeoutReloader = setTimeout(this.reloadExpiredHostedForm.bind(this), 15*60*1000);
+
+                // Verify communicator connected
+                this.communicatorActive = false;
+                this.timeoutCommunicator = setTimeout(this.checkCommunicator.bind(this), 20*1000);
+
+                // There's an awkward break between 400-750px; set max width to avoid scrolling.
+                if (iframe.innerWidth > 400 && iframe.innerWidth < 750) {
+                    iframe.style.maxWidth = '400px';
+                }
+
+                this.iframeInitialized = true;
+            },
+            reloadExpiredHostedForm: function() {
+                if (this.iframeInitialized === true) {
+                    // If form has expired (15 minutes), and is still being displayed, force reload it.
+                    this.resetHostedForm();
+                }
+            },
+            checkCommunicator: function() {
+                if (this.communicatorActive
+                    || !this.showHostedForm
+                    || this.iframeInitialized === false) {
+                    return;
+                }
+
+                console.error('No message received from communicator.');
+                $wire.call('notifyCommunicatorFailure');
+            },
+            handleCommunication: function(event) {
+                if (!event.data
+                    || !event.data.action
+                    || this.showHostedForm === false) {
+                    return;
+                }
+
+                if (typeof location.origin === 'undefined') {
+                    location.origin = location.protocol + '//' + location.host;
+                }
+
+                if (event.origin !== location.origin) {
+                    console.error('Ignored untrusted message from ' + event.origin);
+                    return;
+                }
+
+                this.communicatorActive = true;
+
+                switch (event.data.action) {
+                    case 'cancel':
+                        this.resetHostedForm();
+                        break;
+                    case 'transactResponse':
+                        this.handleResponse(JSON.parse(event.data.response));
+                        break;
+                    case 'successfulSave':
+                        this.handleSave(event.data);
+                        break;
+                    case 'resizeWindow':
+                        var height = Math.ceil(parseFloat(event.data.height)) + 80;
+                        $el.querySelector('iframe').style.height = height + 'px';
+                        break;
+                }
+            },
+            handleResponse: function(response) {
+                if (response.createPaymentProfileResponse !== undefined
+                    && response.createPaymentProfileResponse.success === 'true') {
+                    $wire.set('saveCard', true, true);
+                } else {
+                    $wire.set('saveCard', false, true);
+                }
+
+                /**
+                 * NOTE: To split iframe submission from Place Order (for steps after payment), nullify
+                 * the functionality of this.toggleOrderButton() and this.placeMagentoOrder().
+                 */
+                $wire.set('transactionId', response.transId, true);
+                $wire.call('submitTransaction')
+                    .then(this.placeOrder.bind(this));
+
+                this.iframeInitialized = false;
+            },
+            handleSave: function(data) {
+                if (this.processingSave) {
+                    return;
+                }
+
+                this.processingSave = true;
+
+                $wire.call('getNewCard', data)
+                    .then(this.afterAddCard.bind(this));
+            },
+            afterAddCard: function(data) {
+                this.iframeInitialized = false;
+                this.processingSave = false;
+
+                let cvvField = $el.querySelector('#<?= $code ?>-cc-cid');
+                if (cvvField !== null) {
+                    cvvField.focus();
+                }
+            },
+            placeOrder: function() {
+                hyvaCheckout.main.getWireComponent().placeOrder();
+            },
+        }
+    }
+</script>
