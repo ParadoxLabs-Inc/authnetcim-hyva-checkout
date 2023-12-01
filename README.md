@@ -20,12 +20,14 @@ Features
 ========
 
 * Place orders via Hyva Checkout, with Authorize.net CIM payment
+  ![2023-12-01_152853](https://github.com/ParadoxLabs-Inc/authnetcim-hyva-checkout/assets/13335952/c55eeb44-a24a-4a35-b946-b783d4a77033)
+* Supports payment by credit card, ACH, and stored cards (via CIM tokenization). See Authorize.net extension for full details.
 
 Limitations
 ===========
 
 * Requires the 'Accept Hosted' iframe payment form at this time (no Accept.js or inline form support yet)
-* Does not yet implement the 'My Payment Options' account interface for stored card management
+* Does not yet implement the 'My Payment Options' customer account interface for stored card management
 
 Installation and Usage
 ======================
