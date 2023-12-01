@@ -1,0 +1,34 @@
+{
+    "name": "paradoxlabs/authnetcim-hyva-checkout",
+    "description": "Authorize.Net CIM payment method for Magento 2.x by Paradox Labs",
+    "keywords": ["payment", "authorize.net", "tokenization"],
+    "require": {
+        "hyva-themes/magento2-hyva-checkout": "^1.1.0",
+        "magento/framework": "*",
+        "paradoxlabs/authnetcim": "^5.0.0"
+    },
+    "type": "magento2-module",
+    "version": "1.0.0-dev",
+    "time": "2023-12-01",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Ryan Hoerr",
+            "email": "ryan@paradoxlabs.com"
+        }
+    ],
+    "archive": {
+        "exclude": [
+            ".github",
+            "README.md"
+        ]
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "ParadoxLabs\\AuthnetcimHyvaCheckout\\": ""
+        }
+    }
+}
