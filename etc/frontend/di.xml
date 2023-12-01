@@ -5,6 +5,11 @@
             <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
         </arguments>
     </type>
+    <type name="ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimAch">
+        <arguments>
+            <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
 
     <type name="Hyva\Checkout\Model\Magewire\Payment\PlaceOrderServiceProvider">
         <arguments>

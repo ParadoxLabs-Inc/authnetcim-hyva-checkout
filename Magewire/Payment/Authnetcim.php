@@ -29,7 +29,7 @@ use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magento\Quote\Model\ResourceModel\Quote\Payment;
 use Magewirephp\Magewire\Component\Form;
-use ParadoxLabs\Authnetcim\Block\Form\Cc;
+use ParadoxLabs\TokenBase\Block\Form\Cc;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
@@ -177,7 +177,10 @@ class Authnetcim extends Form implements EvaluationInterface
 
         if ($payment->getData('tokenbase_id') !== null) {
             $card = $this->cardRepository->getById($payment->getData('tokenbase_id'));
-            $this->selectedCard = $card->getHash();
+
+            if ($card->getMethod() === static::METHOD_CODE) {
+                $this->selectedCard = $card->getHash();
+            }
         } else {
             $this->selectedCard = '';
         }
@@ -192,13 +195,16 @@ class Authnetcim extends Form implements EvaluationInterface
     public function initHostedForm(): void
     {
         if ($this->getMethod()->getConfigData('payment_action') === 'order') {
-            $params = $this->acceptCustomerService->getParams();
+            $formService = $this->acceptCustomerService;
         } else {
-            $params = $this->acceptHostedService->getParams();
+            $formService = $this->acceptHostedService;
         }
 
+        $formService->setMethodCode(static::METHOD_CODE);
+        $params = $formService->getParams();
+
         $this->dispatchBrowserEvent(
-            self::METHOD_CODE . 'InitHostedForm',
+            static::METHOD_CODE . 'InitHostedForm',
             $params
         );
     }
@@ -291,7 +297,7 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     protected function setPaymentData($params): void
     {
-        $params['method'] = self::METHOD_CODE;
+        $params['method'] = static::METHOD_CODE;
 
         // Assign data to the quote payment object
         /** @var \Magento\Quote\Model\Quote\Payment $payment */
@@ -354,18 +360,18 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     protected function getMethod(): MethodInterface
     {
-        return $this->formViewModel->getMethod(self::METHOD_CODE);
+        return $this->formViewModel->getMethod(static::METHOD_CODE);
     }
 
     /**
      * Get the active payment method form block
      *
-     * @return \ParadoxLabs\Authnetcim\Block\Form\Cc
+     * @return \ParadoxLabs\TokenBase\Block\Form\Cc
      * @throws \Magento\Framework\Exception\LocalizedException
      */
     protected function getFormBlock(): Cc
     {
-        return $this->formViewModel->getFormBlock(self::METHOD_CODE);
+        return $this->formViewModel->getFormBlock(static::METHOD_CODE);
     }
 
     /**
@@ -377,6 +383,7 @@ class Authnetcim extends Form implements EvaluationInterface
         $this->storedCards = [];
 
         /** @var \ParadoxLabs\TokenBase\Model\Card $card */
+        // TODO: Handle card added via AcceptCustomer
         foreach ($this->getFormBlock()->getStoredCards() as $card) {
             $card = $card->getTypeInstance();
 
@@ -393,7 +400,7 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     public function notifyCommunicatorFailure(): void
     {
-        $this->helper->log(self::METHOD_CODE, 'ERROR: User failed to load hosted form communicator');
+        $this->helper->log(static::METHOD_CODE, 'ERROR: User failed to load hosted form communicator');
 
         $this->dispatchErrorMessage(
             \__(

@@ -2,17 +2,30 @@
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
         <referenceBlock name="checkout.payment.methods">
-            <block name="checkout.payment.method.authnetcim" as="authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml">
+            <block name="checkout.payment.method.authnetcim" as="authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml" ifconfig="payment/authnetcim/active">
                 <arguments>
                     <argument name="magewire" xsi:type="object">\ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\Authnetcim</argument>
                     <argument name="method_code" xsi:type="string">authnetcim</argument>
                 </arguments>
             </block>
+
+            <block name="checkout.payment.method.authnetcim_ach" as="authnetcim_ach" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml" ifconfig="payment/authnetcim_ach/active">
+                <arguments>
+                    <argument name="magewire" xsi:type="object">\ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimAch</argument>
+                    <argument name="method_code" xsi:type="string">authnetcim_ach</argument>
+                </arguments>
+            </block>
         </referenceBlock>
         <referenceContainer name="before.body.end">
-            <block name="script-authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml">
+            <block name="script-authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml" ifconfig="payment/authnetcim/active">
                 <arguments>
                     <argument name="method_code" xsi:type="string">authnetcim</argument>
+                </arguments>
+            </block>
+
+            <block name="script-authnetcim_ach" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml" ifconfig="payment/authnetcim_ach/active">
+                <arguments>
+                    <argument name="method_code" xsi:type="string">authnetcim_ach</argument>
                 </arguments>
             </block>
         </referenceContainer>

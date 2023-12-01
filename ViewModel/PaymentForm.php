@@ -22,7 +22,7 @@
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel;
 
 use Magento\Payment\Model\MethodInterface;
-use ParadoxLabs\Authnetcim\Block\Form\Cc;
+use ParadoxLabs\TokenBase\Block\Form\Cc;
 
 class PaymentForm implements \Magento\Framework\View\Element\Block\ArgumentInterface
 {
@@ -37,7 +37,7 @@ class PaymentForm implements \Magento\Framework\View\Element\Block\ArgumentInter
     protected $layout;
 
     /**
-     * @var \ParadoxLabs\Authnetcim\Block\Form\Cc
+     * @var \ParadoxLabs\TokenBase\Block\Form\Cc
      */
     protected $formBlock;
 
@@ -71,16 +71,16 @@ class PaymentForm implements \Magento\Framework\View\Element\Block\ArgumentInter
      * Get the active payment method form block
      *
      * @param string $code
-     * @return \ParadoxLabs\Authnetcim\Block\Form\Cc
+     * @return \ParadoxLabs\TokenBase\Block\Form\Cc
      * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function getFormBlock(string $code): Cc
     {
         if (!isset($this->formBlock)) {
-            $formBlock = $this->layout->createBlock(Cc::class);
-            $formBlock->setMethod($this->getMethod($code));
-
-            $this->formBlock = $formBlock;
+            $this->formBlock = $this->helper->getMethodFormBlock(
+                $this->getMethod($code),
+                $this->layout
+            );
         }
 
         return $this->formBlock;

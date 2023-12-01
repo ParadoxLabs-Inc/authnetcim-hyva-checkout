@@ -54,38 +54,35 @@ $image          = $formBlock->getBrandingImage();
         </p>
     <?php endif; ?>
 
-    <template x-if="storedCards">
-        <div class="field mb-2">
-            <label for="<?= $code ?>-card-id" class="block font-medium text-gray-700">
-                <?= $escaper->escapeHtml(__('Payment Information')) ?>
-            </label>
-            <select id="<?= $code ?>-card-id"
-                    name="payment[card_id]"
-                    class="block w-full shadow-sm border-gray-300 rounded-md"
-                    wire:model.defer="selectedCard"
-                    wire:select.debounce.300ms.blur
-                    x-model="selectedCard"
-                    <?php if ($magewire->hasError('selectedCard')): ?>
-                        aria-invalid="true" aria-errormessage="selected-card-error"
-                    <?php endif ?>
-            >
-                <template x-for="storedCard in storedCards" :key="storedCard.hash">
-                    <option :value="storedCard.hash"
-                            :data-type="storedCard.type"
-                            :selected="storedCard.hash === selectedCard"
-                            x-text="storedCard.label">
-                    </option>
-                </template>
-                <option value=''><?= $escaper->escapeHtml(__('Add new card')) ?></option>
-            </select>
+    <div class="field mb-2" x-show="storedCards.length > 0">
+        <label for="<?= $code ?>-card-id" class="block font-medium text-gray-700">
+            <?= $escaper->escapeHtml(__('Payment Information')) ?>
+        </label>
+        <select id="<?= $code ?>-card-id"
+                class="block w-full shadow-sm border-gray-300 rounded-md"
+                wire:model.defer="selectedCard"
+                wire:select.debounce.300ms.blur
+                x-model="selectedCard"
+                <?php if ($magewire->hasError('selectedCard')): ?>
+                    aria-invalid="true" aria-errormessage="selected-card-error"
+                <?php endif ?>
+        >
+            <template x-for="storedCard in storedCards" :key="storedCard.hash">
+                <option :value="storedCard.hash"
+                        :data-type="storedCard.type"
+                        :selected="storedCard.hash === selectedCard"
+                        x-text="storedCard.label">
+                </option>
+            </template>
+            <option value=''><?= $escaper->escapeHtml(__('Add new card')) ?></option>
+        </select>
 
-            <?php if ($magewire->hasError('selectedCard')): ?>
-                <span class="text-red-800" id="selected-card-error">
-                    <?= $escaper->escapeHtml($magewire->getError('selectedCard')) ?>
-                </span>
-            <?php endif ?>
-        </div>
-    </template>
+        <?php if ($magewire->hasError('selectedCard')): ?>
+            <span class="text-red-800" id="selected-card-error">
+                <?= $escaper->escapeHtml($magewire->getError('selectedCard')) ?>
+            </span>
+        <?php endif ?>
+    </div>
 
     <div class="card p-0"
          x-show="showHostedForm"
@@ -112,7 +109,6 @@ $image          = $formBlock->getBrandingImage();
                    title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
                    class="block w-16 shadow-sm border-gray-300 rounded-md"
                    id="<?= $code ?>-cc-cid"
-                   name="payment[cc_cid]"
                    wire:model.debounce.1500ms.blur="paymentCcCid"
                    value=""
                    autocomplete="cc-csc"
