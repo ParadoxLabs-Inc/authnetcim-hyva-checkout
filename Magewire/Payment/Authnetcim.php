@@ -69,7 +69,7 @@ class Authnetcim extends Form implements EvaluationInterface
     public $paymentCcCid = '';
     public $transactionId = '';
     public $saveCard = false;
-    public $storedCards;
+    public $storedCards = [];
 
     /* Protected property validation rule map */
     protected $rules = [
@@ -175,14 +175,16 @@ class Authnetcim extends Form implements EvaluationInterface
     {
         $payment = $this->getQuote()->getPayment();
 
+        $this->selectedCard = '';
+
         if ($payment->getData('tokenbase_id') !== null) {
             $card = $this->cardRepository->getById($payment->getData('tokenbase_id'));
 
-            if ($card->getMethod() === static::METHOD_CODE) {
+            if ($card->getMethod() === static::METHOD_CODE
+                && (int)$card->getCustomerId() === (int)$this->getQuote()->getCustomerId()) {
                 $this->selectedCard = $card->getHash();
+                $this->addStoredCardToList($card);
             }
-        } else {
-            $this->selectedCard = '';
         }
     }
 
@@ -380,18 +382,9 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     protected function loadStoredCards(): void
     {
-        $this->storedCards = [];
-
         /** @var \ParadoxLabs\TokenBase\Model\Card $card */
-        // TODO: Handle card added via AcceptCustomer
         foreach ($this->getFormBlock()->getStoredCards() as $card) {
-            $card = $card->getTypeInstance();
-
-            $this->storedCards[] = [
-                'hash' => $card->getHash(),
-                'label' => $card->getLabel(),
-                'type' => $card->getType(),
-            ];
+            $this->addStoredCardToList($card);
         }
     }
 
@@ -420,10 +413,22 @@ class Authnetcim extends Form implements EvaluationInterface
         // Import new card
         $newCard = $this->acceptCustomerService->getCard();
 
-        $this->selectedCard = $newCard->getHash();
-        $this->updatedSelectedCard($this->selectedCard);
+        $this->selectedCard  = $newCard->getHash();
+        $this->addStoredCardToList($newCard);
+    }
 
-        // Update stored cards list
-        $this->loadStoredCards();
+    /**
+     * @param \ParadoxLabs\TokenBase\Api\Data\CardInterface $card
+     * @return void
+     */
+    protected function addStoredCardToList(\ParadoxLabs\TokenBase\Api\Data\CardInterface $card): void
+    {
+        $card = $card->getTypeInstance();
+
+        $this->storedCards[ $card->getHash() ] = [
+            'hash' => $card->getHash(),
+            'label' => $card->getLabel(),
+            'type' => $card->getType(),
+        ];
     }
 }
