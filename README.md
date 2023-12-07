@@ -11,9 +11,7 @@ This module adds support for Hyva Checkout to our [Authorize.net CIM payment met
 Requirements
 ============
 
-* Magento 2.3 or 2.4 (or equivalent version of Adobe Commerce, Adobe Commerce Cloud, or Mage-OS)
-* PHP 7.3, 7.4, 8.0, 8.1, or 8.2
-* composer 1 or 2
+* Magento 2.4 (or equivalent version of Adobe Commerce, Adobe Commerce Cloud, or Mage-OS)
 * Hyva Checkout (separate product and license)
 
 Features

@@ -5,11 +5,11 @@
     "require": {
         "hyva-themes/magento2-hyva-checkout": "^1.1.0",
         "magento/framework": "*",
-        "paradoxlabs/authnetcim": "^5.0.0-beta1"
+        "paradoxlabs/authnetcim": "^5.0.0"
     },
     "type": "magento2-module",
-    "version": "1.0.0-rc1",
-    "time": "2023-12-01",
+    "version": "1.0.0",
+    "time": "2023-12-07",
     "license": "Apache-2.0",
     "authors": [
         {

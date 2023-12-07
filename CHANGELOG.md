@@ -1,4 +1,4 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
-## 1.0.0-dev - December 1, 2023
-- Still under active development
+## 1.0.0 - December 7, 2023
+- Initial release: ParadoxLabs Authorize.net CIM support for Hosted Forms on Hyva Checkout
