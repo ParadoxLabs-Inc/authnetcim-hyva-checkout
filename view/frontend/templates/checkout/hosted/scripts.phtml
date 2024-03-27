@@ -48,6 +48,7 @@ $code = $escaper->escapeJs($block->getData('method_code'));
 
                 window.addEventListener('message', this.handleCommunication.bind(this));
                 document.addEventListener('checkout:payment:method-activate', this.toggleOrderButton.bind(this));
+                document.removeEventListener('<?= $code ?>InitHostedForm', this.loadHostedForm.bind(this));
                 document.addEventListener('<?= $code ?>InitHostedForm', this.loadHostedForm.bind(this));
                 this.$watch('selectedCard', this.changeSelectedCard.bind(this));
 
@@ -84,6 +85,10 @@ $code = $escaper->escapeJs($block->getData('method_code'));
                 }
             },
             loadHostedForm: function(event) {
+                if ($el.isConnected === false) {
+                    return;
+                }
+
                 let data = event.detail;
 
                 var iframe = $el.querySelector('iframe');

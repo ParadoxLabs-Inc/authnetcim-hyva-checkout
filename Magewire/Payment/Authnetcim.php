@@ -49,7 +49,7 @@ class Authnetcim extends Form implements EvaluationInterface
         'billing_address_saved' => 'Loading payment form',
         'billing_address_submitted' => 'Loading payment form',
         'getNewCard' => 'Updating payment data',
-        'initHostedForm' => 'Loading payment form',
+        // 'initHostedForm' => 'Loading payment form',
         'paymentCcCid' => 'Updating payment data',
         'selectedCard' => 'Updating payment selection',
         'submitTransaction' => 'Processing payment',
