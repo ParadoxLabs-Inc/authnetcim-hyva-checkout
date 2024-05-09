@@ -88,7 +88,7 @@ $image          = $formBlock->getBrandingImage();
          x-show="showHostedForm"
          wire:ignore
     >
-        <iframe src="about:blank" id="<?= $code ?>_iframe" name="<?= $code ?>_iframe" class="w-full" style="min-width:300px;height:400px;"></iframe>
+        <iframe src="about:blank" id="<?= $code ?>_iframe" name="<?= $code ?>_iframe" class="w-full"></iframe>
     </div>
 
     <?php if (!$formBlock->isGuestCheckout() && (bool)$method->getConfigData('allow_unsaved') === false): ?>
@@ -129,3 +129,15 @@ $image          = $formBlock->getBrandingImage();
 
     <?= $block->getChildHtml(); ?>
 </div>
+<?php $inlineStyle = <<<CSS
+    \#{$code}_iframe {
+        min-width: 300px;
+        height: 400px;
+        border: 0;
+    }
+CSS; ?>
+<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('style', [], $inlineStyle, false) ?>
+<?php else: ?>
+    <style><?= $inlineStyle ?></style>
+<?php endif; ?>

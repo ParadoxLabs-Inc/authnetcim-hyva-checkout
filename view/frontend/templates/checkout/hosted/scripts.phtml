@@ -26,14 +26,13 @@ use Magento\Framework\View\Element\Template;
 /** @var Escaper $escaper */
 
 $code = $escaper->escapeJs($block->getData('method_code'));
-?>
-<script>
+$inlineScript = <<<JS
     'use strict';
 
-    const <?= $code ?>PaymentForm = ($el, $wire) => {
+    const {$code}PaymentForm = (\$el, \$wire) => {
         return {
-            storedCards: $wire.entangle('storedCards'),
-            selectedCard: $wire.entangle('selectedCard'),
+            storedCards: \$wire.entangle('storedCards'),
+            selectedCard: \$wire.entangle('selectedCard'),
             communicatorActive: false,
             iframeInitialized: false,
             showHostedForm: true,
@@ -48,9 +47,9 @@ $code = $escaper->escapeJs($block->getData('method_code'));
 
                 window.addEventListener('message', this.handleCommunication.bind(this));
                 document.addEventListener('checkout:payment:method-activate', this.toggleOrderButton.bind(this));
-                document.removeEventListener('<?= $code ?>InitHostedForm', this.loadHostedForm.bind(this));
-                document.addEventListener('<?= $code ?>InitHostedForm', this.loadHostedForm.bind(this));
-                this.$watch('selectedCard', this.changeSelectedCard.bind(this));
+                document.removeEventListener('{$code}InitHostedForm', this.loadHostedForm.bind(this));
+                document.addEventListener('{$code}InitHostedForm', this.loadHostedForm.bind(this));
+                this.\$watch('selectedCard', this.changeSelectedCard.bind(this));
 
                 this.changeSelectedCard();
 
@@ -71,27 +70,27 @@ $code = $escaper->escapeJs($block->getData('method_code'));
                 clearTimeout(this.timeoutReloader);
                 clearTimeout(this.timeoutCommunicator);
 
-                $wire.call('initHostedForm');
+                \$wire.call('initHostedForm');
             },
             toggleOrderButton: function(event) {
                 let method = event && event.detail
                              ? event.detail.method
                              : document.querySelector('input[name="payment-method-option"]:checked').value;
 
-                if (method === '<?= $code ?>' && this.showHostedForm) {
+                if (method === '{$code}' && this.showHostedForm) {
                     document.querySelector('.btn-primary[x-bind="buttonPlaceOrder()"]').style.display = 'none';
                 } else {
                     document.querySelector('.btn-primary[x-bind="buttonPlaceOrder()"]').style.display = 'block';
                 }
             },
             loadHostedForm: function(event) {
-                if ($el.isConnected === false) {
+                if (\$el.isConnected === false) {
                     return;
                 }
 
                 let data = event.detail;
 
-                var iframe = $el.querySelector('iframe');
+                var iframe = \$el.querySelector('iframe');
 
                 var form = document.createElement('form');
                 form.target = iframe.name;
@@ -106,7 +105,7 @@ $code = $escaper->escapeJs($block->getData('method_code'));
                     form.appendChild(input);
                 }
 
-                $el.appendChild(form);
+                \$el.appendChild(form);
                 form.submit();
 
                 // Reload the hosted form when it expires
@@ -137,7 +136,7 @@ $code = $escaper->escapeJs($block->getData('method_code'));
                 }
 
                 console.error('No message received from communicator.');
-                $wire.call('notifyCommunicatorFailure');
+                \$wire.call('notifyCommunicatorFailure');
             },
             handleCommunication: function(event) {
                 if (!event.data
@@ -169,24 +168,24 @@ $code = $escaper->escapeJs($block->getData('method_code'));
                         break;
                     case 'resizeWindow':
                         var height = Math.ceil(parseFloat(event.data.height)) + 80;
-                        $el.querySelector('iframe').style.height = height + 'px';
+                        \$el.querySelector('iframe').style.height = height + 'px';
                         break;
                 }
             },
             handleResponse: function(response) {
                 if (response.createPaymentProfileResponse !== undefined
                     && response.createPaymentProfileResponse.success === 'true') {
-                    $wire.set('saveCard', true, true);
+                    \$wire.set('saveCard', true, true);
                 } else {
-                    $wire.set('saveCard', false, true);
+                    \$wire.set('saveCard', false, true);
                 }
 
                 /**
                  * NOTE: To split iframe submission from Place Order (for steps after payment), nullify
                  * the functionality of this.toggleOrderButton() and this.placeMagentoOrder().
                  */
-                $wire.set('transactionId', response.transId, true);
-                $wire.call('submitTransaction')
+                \$wire.set('transactionId', response.transId, true);
+                \$wire.call('submitTransaction')
                     .then(this.placeOrder.bind(this));
 
                 this.iframeInitialized = false;
@@ -198,14 +197,14 @@ $code = $escaper->escapeJs($block->getData('method_code'));
 
                 this.processingSave = true;
 
-                $wire.call('getNewCard', data)
+                \$wire.call('getNewCard', data)
                     .then(this.afterAddCard.bind(this));
             },
             afterAddCard: function(data) {
                 this.iframeInitialized = false;
                 this.processingSave = false;
 
-                let cvvField = $el.querySelector('#<?= $code ?>-cc-cid');
+                let cvvField = \$el.querySelector('#{$code}-cc-cid');
                 if (cvvField !== null) {
                     cvvField.focus();
                 }
@@ -215,4 +214,11 @@ $code = $escaper->escapeJs($block->getData('method_code'));
             },
         }
     }
-</script>
+JS;
+?>
+<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('script', [], $inlineScript, false) ?>
+<?php else: ?>
+    <script><?= $inlineScript ?></script>
+<?php endif; ?>
+
