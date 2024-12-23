@@ -128,16 +128,18 @@ $image          = $formBlock->getBrandingImage();
     <?php endif; ?>
 
     <?= $block->getChildHtml(); ?>
-</div>
-<?php $inlineStyle = <<<CSS
+
+    <?php $inlineStyle = <<<CSS
     \#{$code}_iframe {
         min-width: 300px;
         height: 400px;
         border: 0;
     }
-CSS; ?>
-<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
-    <?= /* @noEscape */ $secureRenderer->renderTag('style', [], $inlineStyle, false) ?>
-<?php else: ?>
-    <style><?= $inlineStyle ?></style>
-<?php endif; ?>
+CSS;
+    ?>
+    <?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
+        <?= /* @noEscape */ $secureRenderer->renderTag('style', [], $inlineStyle, false) ?>
+    <?php else: ?>
+        <style><?= $inlineStyle ?></style>
+    <?php endif; ?>
+</div>
