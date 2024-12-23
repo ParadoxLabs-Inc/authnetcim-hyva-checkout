@@ -88,7 +88,8 @@ $image          = $formBlock->getBrandingImage();
          x-show="showHostedForm"
          wire:ignore
     >
-        <iframe src="about:blank" id="<?= $code ?>_iframe" name="<?= $code ?>_iframe" class="w-full"></iframe>
+        <iframe src="about:blank" id="<?= $code ?>_iframe" name="<?= $code ?>_iframe" class="w-full" x-show="!showTermsNotice" x-cloak></iframe>
+        <p x-show="showTermsNotice" x-cloak class="text-secondary p-4"><?= $escaper->escapeHtml(__('Please accept the %1 to complete payment.', __('Terms and Conditions'))) ?></p>
     </div>
 
     <?php if (!$formBlock->isGuestCheckout() && (bool)$method->getConfigData('allow_unsaved') === false): ?>

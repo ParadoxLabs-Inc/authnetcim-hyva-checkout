@@ -36,6 +36,7 @@ $inlineScript = <<<JS
             communicatorActive: false,
             iframeInitialized: false,
             showHostedForm: true,
+            showTermsNotice: false,
             componentInitialized: false,
             processingSave: false,
             timeoutReloader: null,
@@ -51,6 +52,16 @@ $inlineScript = <<<JS
                 document.addEventListener('{$code}InitHostedForm', this.loadHostedForm.bind(this));
                 this.\$watch('selectedCard', this.changeSelectedCard.bind(this));
 
+                if (document.querySelectorAll('[wire\\\\:id=checkout\\\\.terms-conditions]').length) {
+                    this.evaluateTerms();
+
+                    Magewire.hook('message.processed', (message, component) => {
+                        if (component.id === 'checkout.terms-conditions') {
+                            this.evaluateTerms();
+                        }
+                    });
+                }
+
                 this.changeSelectedCard();
 
                 this.componentInitialized = true;
@@ -58,7 +69,9 @@ $inlineScript = <<<JS
             changeSelectedCard: function() {
                 this.showHostedForm = this.selectedCard === '';
 
-                if (this.iframeInitialized === false && this.showHostedForm === true) {
+                if (this.iframeInitialized === false
+                    && this.showHostedForm === true
+                    && this.showTermsNotice === false) {
                     // The initialized flag is to debounce and ensure we don't reinit unless absolutely necessary.
                     this.resetHostedForm();
                 }
@@ -66,7 +79,6 @@ $inlineScript = <<<JS
                 this.toggleOrderButton();
             },
             resetHostedForm: function() {
-                // TODO: Trigger agreement validation before loading form
                 clearTimeout(this.timeoutReloader);
                 clearTimeout(this.timeoutCommunicator);
 
@@ -131,6 +143,7 @@ $inlineScript = <<<JS
             checkCommunicator: function() {
                 if (this.communicatorActive
                     || !this.showHostedForm
+                    || !this.showTermsNotice
                     || this.iframeInitialized === false) {
                     return;
                 }
@@ -167,8 +180,10 @@ $inlineScript = <<<JS
                         this.handleSave(event.data);
                         break;
                     case 'resizeWindow':
-                        var height = Math.ceil(parseFloat(event.data.height)) + 80;
-                        \$el.querySelector('iframe').style.height = height + 'px';
+                        if (event.data.height > 0) {
+                            var height = Math.ceil(parseFloat(event.data.height)) + 80;
+                            \$el.querySelector('iframe').style.height = height + 'px';
+                        }
                         break;
                 }
             },
@@ -212,6 +227,23 @@ $inlineScript = <<<JS
             placeOrder: function() {
                 hyvaCheckout.main.getWireComponent().placeOrder();
             },
+            evaluateTerms: function() {
+                try {
+                    const terms = Magewire.find('checkout.terms-conditions').get('termAcceptance');
+                    for (let i in terms) {
+                        if (terms[i] === false) {
+                            this.showTermsNotice = true;
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // No-op -- catch errors in case the component doesn't exist yet
+                }
+
+                this.showTermsNotice = false;
+
+                this.changeSelectedCard();
+            }
         }
     }
 JS;
