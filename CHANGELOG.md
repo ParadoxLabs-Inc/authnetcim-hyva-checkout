@@ -1,5 +1,9 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 1.2.0 - Jan 13, 2025
+- Added support for terms and conditions.
+- Fixed Magewire 'multiple roots' error.
+
 ## 1.1.0 - Jun 28, 2024
 - Added CSP/SRI secure mode support for 2.4.0+ (2.4.7 checkout compatibility).
 - Fixed "Loading payment form" spinner not resolving on checkout payment form reload.
