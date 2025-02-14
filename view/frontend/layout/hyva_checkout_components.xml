@@ -2,30 +2,53 @@
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
         <referenceBlock name="checkout.payment.methods">
-            <block name="checkout.payment.method.authnetcim" as="authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml" ifconfig="payment/authnetcim/active">
+            <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="checkout.payment.method.authnetcim" as="authnetcim" ifconfig="payment/authnetcim/active">
                 <arguments>
                     <argument name="magewire" xsi:type="object">\ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\Authnetcim</argument>
                     <argument name="method_code" xsi:type="string">authnetcim</argument>
+                    <argument name="metadata" xsi:type="array">
+                        <item name="icon" xsi:type="array">
+                            <item name="svg" xsi:type="string">payment-icons/light/creditcard</item>
+                            <item name="attributes" xsi:type="array">
+                                <item name="fill" xsi:type="string">none</item>
+                            </item>
+                            <item name="subtitle" xsi:type="string" translate="true">Visa, Mastercard &amp; More</item>
+                        </item>
+                    </argument>
+                    <argument name="form_template" xsi:type="array">
+                        <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml</item>
+                        <item name="acceptjs" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/acceptjs/form.phtml</item>
+                    </argument>
                 </arguments>
             </block>
 
-            <block name="checkout.payment.method.authnetcim_ach" as="authnetcim_ach" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml" ifconfig="payment/authnetcim_ach/active">
+            <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="checkout.payment.method.authnetcim_ach" as="authnetcim_ach" ifconfig="payment/authnetcim_ach/active">
                 <arguments>
                     <argument name="magewire" xsi:type="object">\ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimAch</argument>
                     <argument name="method_code" xsi:type="string">authnetcim_ach</argument>
+                    <argument name="form_template" xsi:type="array">
+                        <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/form.phtml</item>
+                    </argument>
                 </arguments>
             </block>
         </referenceBlock>
-        <referenceContainer name="before.body.end">
-            <block name="script-authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml" ifconfig="payment/authnetcim/active">
+        <referenceContainer name="hyva.checkout.init-validation.after">
+            <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="script-authnetcim" ifconfig="payment/authnetcim/active">
                 <arguments>
                     <argument name="method_code" xsi:type="string">authnetcim</argument>
+                    <argument name="form_template" xsi:type="array">
+                        <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml</item>
+                        <item name="acceptjs" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/acceptjs/scripts.phtml</item>
+                    </argument>
                 </arguments>
             </block>
 
-            <block name="script-authnetcim_ach" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml" ifconfig="payment/authnetcim_ach/active">
+            <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="script-authnetcim_ach" ifconfig="payment/authnetcim_ach/active">
                 <arguments>
                     <argument name="method_code" xsi:type="string">authnetcim_ach</argument>
+                    <argument name="form_template" xsi:type="array">
+                        <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml</item>
+                    </argument>
                 </arguments>
             </block>
         </referenceContainer>

@@ -51,10 +51,17 @@ class PlaceOrderService extends \Hyva\Checkout\Model\Magewire\Payment\AbstractPl
     public function placeOrder(\Magento\Quote\Model\Quote $quote): int
     {
         // Load CVV in from session if present
-        $ccCid = $this->checkoutSession->getStepData('payment', 'cc_cid');
-        if (!empty($ccCid) && is_numeric((string)$ccCid)) {
-            $quote->getPayment()->setData('cc_cid', $ccCid);
-        }
+        // TODO: Handle this via $this->getData() instead of checkoutSession
+        // $ccCid = $this->checkoutSession->getStepData('payment', 'cc_cid');
+        // if (!empty($ccCid) && is_numeric((string)$ccCid)) {
+        //     $quote->getPayment()->setData('cc_cid', $ccCid);
+        // }
+
+        $paymentData = $this->getData()->getPayment();
+
+        /** @var \Magento\Quote\Model\Quote\Payment $payment */
+        $payment = $quote->getPayment();
+        $payment->setData($paymentData);
 
         return parent::placeOrder($quote);
     }

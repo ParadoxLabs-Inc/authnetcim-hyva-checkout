@@ -29,6 +29,7 @@ use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magento\Quote\Model\ResourceModel\Quote\Payment;
 use Magewirephp\Magewire\Component\Form;
+use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 use ParadoxLabs\TokenBase\Block\Form\Cc;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
@@ -307,7 +308,7 @@ class Authnetcim extends Form implements EvaluationInterface
         $payment->importData($params);
         $payment->getMethodInstance()->validate();
 
-        $this->checkoutSession->setStepData('payment', 'cc_cid', $params['cc_cid'] ?? null);
+        // $this->checkoutSession->setStepData('payment', 'cc_cid', $params['cc_cid'] ?? null);
 
         // Save the quote payment
         if ($payment->hasDataChanges()) {
@@ -324,10 +325,18 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     public function evaluateCompletion(EvaluationResultFactory $factory): EvaluationResultInterface
     {
-        // If this payment method is selected, only return a Success if all required data is present
-        return $this->isRequiredDataPresent()
-            ? $factory->createSuccess()
-            : $factory->createBlocking();
+        // if (!$this->isRequiredDataPresent()) {
+        //     return $factory->createBlocking();
+        // }
+
+        // TODO: Handle validation success with hosted form
+        $validationError = $factory->createErrorMessage();
+        $validationError->withMessage('There\'s an issue with your payment details. Please check the payment form.');
+
+        $validation = $factory->createValidation('validate' . static::METHOD_CODE);
+        $validation->withFailureResult($validationError);
+
+        return $validation;
     }
 
     /**
@@ -339,15 +348,19 @@ class Authnetcim extends Form implements EvaluationInterface
     protected function isRequiredDataPresent(): bool
     {
         // Stored card payment
-        if (!empty($this->selectedCard)) {
-            // With CVV either present or not required
-            if (!empty($this->paymentCcCid) || $this->getMethod()->getConfigData('require_ccv') === false) {
-                return true;
-            }
-        }
+        // if (!empty($this->selectedCard)) {
+        //     // With CVV either present or not required
+        //     if (!empty($this->paymentCcCid) || $this->getMethod()->getConfigData('require_ccv') === false) {
+        //         return true;
+        //     }
+        // }
 
         // New card payment
-        if (!empty($this->transactionId)) {
+        $formType = $this->getMethod()->getConfigData('form_type');
+        if ($formType === ConfigProvider::FORM_HOSTED && !empty($this->transactionId)) {
+            return true;
+        }
+        if ($formType === ConfigProvider::FORM_ACCEPTJS /*&& !empty($this->acceptJsValue)*/) {
             return true;
         }
 

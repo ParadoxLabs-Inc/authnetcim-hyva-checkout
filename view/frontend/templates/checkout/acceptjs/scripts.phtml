@@ -1,0 +1,393 @@
+<?php declare(strict_types=1);
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Magento\Framework\Escaper;
+use ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate;
+
+/** @var CheckoutTemplate $block */
+/** @var Escaper $escaper */
+
+$code = $escaper->escapeJs($block->getData('method_code'));
+$cardTypes = json_encode($block->getCcTypes());
+
+$inlineScript = <<<JS
+    'use strict';
+
+    window.addEventListener('checkout:init:validation', event => {
+        hyvaCheckout.evaluation.registerValidator(
+            'validate{$code}',
+            async (element, component) => {
+                return new Promise((resolve, reject) => {
+                    window.dispatchEvent(
+                        new CustomEvent('checkout:validate:{$code}', {detail: {resolve, reject}})
+                    );
+                });
+            }
+        );
+    });
+
+    const {$code}PaymentForm = (\$el, \$wire) => {
+        return {
+            storedCards: \$wire.entangle('storedCards'),
+            selectedCard: '',
+            componentInitialized: false,
+            showForm: true,
+            config: {},
+            payment: {
+                method: '{$code}',
+                card_id: '',
+                save: true,
+                cc_type: 'OT',
+                cc_number: '',
+                cc_exp: null,
+                cc_exp_year: null,
+                cc_exp_month: null,
+                cc_cid: null
+            },
+            state: {
+                cc_security: 3,
+                cc_length: 20,
+                cc_type: null,
+            },
+            error: {
+                cc_number: '',
+                cc_exp: '',
+                cc_cid: '',
+                general: ''
+            },
+            promise: {
+                resolve: null,
+                reject: null
+            },
+            // Change certain error responses to be more useful.
+            errorMap: {
+                'E_WC_10': 'API credentials invalid. If you are an administrator, please correct the API Login ID.',
+                'E_WC_19': 'API credentials invalid. If you are an administrator, please correct the API Login ID and'
+                           + ' Client Key.',
+                'E_WC_21': 'API credentials invalid. If you are an administrator, please correct the API Login ID and'
+                           + ' Client Key.'
+            },
+            initForm: function(config) {
+                if (this.componentInitialized) {
+                    return;
+                }
+
+                this.config = config;
+                this.selectedCard = config.selectedCard;
+                this.payment.card_id = config.selectedCard;
+                this.payment.save = config.defaultSaveCard;
+
+                window.addEventListener(
+                    'checkout:validate:{$code}',
+                    this.validateAndTokenize.bind(this)
+                );
+
+                this.initAcceptJs();
+
+                this.\$watch('selectedCard', this.changeSelectedCard.bind(this));
+                this.changeSelectedCard();
+
+                this.formatExpirySpacing();
+                this.formatCreditCard();
+
+                this.componentInitialized = true;
+            },
+            initAcceptJs: function() {
+                window['{$code}_acceptJs_callback'] = this.handlePaymentResponse.bind(this);
+                window.isReady = true;
+
+                const script = document.createElement('script');
+                if (this.config.sandbox) {
+                    script.src = 'https://jstest.authorize.net/v1/Accept.js';
+                } else {
+                    script.src = 'https://js.authorize.net/v1/Accept.js';
+                }
+                script.type = 'text/javascript';
+                document.head.append(script);
+            },
+            validateAndTokenize: function (event) {
+                this.promise.resolve = event.detail.resolve;
+                this.promise.reject  = event.detail.reject;
+
+                // Process stored card, if selected
+                if (this.payment.card_id) {
+                    this.handlePaymentResponseSuccess();
+                    return;
+                }
+
+                // Validate fields, if new
+                const fields = [
+                    document.querySelector('#{$code}-cc-number'),
+                    document.querySelector('#{$code}-cc-exp'),
+                    document.querySelector('#{$code}-cc-cid')
+                ];
+                for (let i in fields) {
+                    fields[i].dispatchEvent(new Event('change'));
+                    if (fields[i].checkValidity() === false) {
+                        this.promise.reject('Validation error');
+                        return;
+                    }
+                }
+
+                // Tokenize
+                var paymentData = {
+                    cardData: {
+                        cardNumber: this.payment.cc_number.replace(/\D/g,''),
+                        month: this.payment.cc_exp_month,
+                        year: this.payment.cc_exp_year,
+                        cardCode: this.payment.cc_cid
+                    },
+                    authData: {
+                        clientKey: this.config.clientKey,
+                        apiLoginID: this.config.apiLoginId
+                    }
+                };
+
+                Accept.dispatchData(
+                    paymentData,
+                    '{$code}_acceptJs_callback'
+                );
+            },
+            handlePaymentResponse: function (response) {
+                if (response.messages.resultCode === 'Error') {
+                    this.handlePaymentResponseError(response);
+                } else {
+                    this.handlePaymentResponseSuccess(response);
+                }
+            },
+            handlePaymentResponseError: function (response) {
+                hyvaCheckout.storage.setValue('payment', []);
+
+                var messageList = [];
+                for (var i = 0; i < response.messages.message.length; i++) {
+                    var errorText = response.messages.message[i].text;
+                    if (typeof this.errorMap[response.messages.message[i].code] !== 'undefined') {
+                        errorText = this.errorMap[response.messages.message[i].code];
+                    }
+                    messageList.push(errorText);
+                }
+
+                this.error.general = messageList.join(' ');
+
+                this.promise.reject(messageList.join(' '));
+            },
+            handlePaymentResponseSuccess: function (response) {
+                let payload = Object.assign({}, this.payment);
+
+                if (response !== undefined && typeof response.opaqueData !== 'undefined') {
+                    payload.acceptjs_key = response.opaqueData.dataDescriptor;
+                    payload.acceptjs_value = response.opaqueData.dataValue;
+                }
+
+                if (this.payment.cc_number) {
+                    var cc_no = this.payment.cc_number.replace(/\D/g,'');
+                    payload.cc_last4 = cc_no.substring(cc_no.length - 4);
+                    payload.cc_bin   = cc_no.substring(0, 6);
+                    delete payload.cc_number;
+                } else if (this.payment.card_id !== '') {
+                    payload = {
+                        method: payload.method,
+                        card_id: payload.card_id,
+                        cc_cid: payload.cc_cid,
+                    }
+                }
+
+                hyvaCheckout.storage.setValue(
+                    'payment',
+                    payload
+                );
+
+                this.promise.resolve(true);
+            },
+            changeSelectedCard: function() {
+                this.showForm = this.selectedCard === '';
+                this.payment.card_id = this.selectedCard;
+
+                if (this.selectedCard !== '') {
+                    this.payment.cc_number = '';
+                    this.payment.cc_exp = '';
+                }
+
+                let cardType = this.cardTypes['OT'];
+                if (this.selectedCard !== ''
+                    && this.storedCards[this.selectedCard].type
+                    && this.cardTypes[this.storedCards[this.selectedCard].type]) {
+                    cardType = this.cardTypes[this.storedCards[this.selectedCard].type];
+                }
+                this.payment.cc_type = cardType.type;
+                this.state.cc_type = cardType;
+            },
+            validateCcNumber(e) {
+                var s = e.target.value;
+                // remove non-numerics
+                var v = '0123456789',
+                    w = '',
+                    i, j, k, m, c, a, x;
+
+                for (i = 0; i < s.length; i++) {
+                    x = s.charAt(i);
+
+                    if (v.indexOf(x, 0) !== -1) {
+                        w += x;
+                    }
+                }
+                // validate number
+                j = w.length / 2;
+                k = Math.floor(j);
+                m = Math.ceil(j) - k;
+                c = 0;
+
+                for (i = 0; i < k; i++) {
+                    a = w.charAt(i * 2 + m) * 2;
+                    c += a > 9 ? Math.floor(a / 10 + a % 10) : a;
+                }
+
+                for (i = 0; i < k + m; i++) {
+                    c += w.charAt(i * 2 + 1 - m) * 1;
+                }
+
+                const valid = s !== '' && (c % 10 === 0);
+
+                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Invalid credit card number.'))}");
+                if (!valid) {
+                    e.target.reportValidity();
+                }
+            },
+            validateExpiration(e) {
+                const exp = e.target.value;
+                const parts = exp.split("/");
+
+                let year  = parts[1] - 0;
+                let month = parts[0] - 0;
+
+                if (year < 100) {
+                    year += 2000;
+                }
+                if (month < 10) {
+                    month = '0' + month;
+                }
+
+                this.payment.cc_exp_year  = year;
+                this.payment.cc_exp_month = month;
+
+                const expDate = new Date(year + '-' + month + '-15');
+                const currentMonth = new Date();
+                currentMonth.setDate(1);
+                const valid = (expDate >= currentMonth);
+
+                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Invalid credit card expiration date.'))}");
+                if (!valid) {
+                    e.target.reportValidity();
+                }
+            },
+            validateCvv(e) {
+                const cvv = e.target.value;
+                const valid = (cvv.length === this.state.cc_security);
+
+                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', this.state.cc_type.code.name));
+                if (!valid) {
+                    e.target.reportValidity();
+                }
+            },
+            /**
+             * Card formatting solution based on 'Credit Card type auto-detection & format w/ Alpine.js'
+             * Modified to use system card data.
+             * @author: Chris Violette
+             * @pen: https://codepen.io/pixleight/pen/OJXGazo?editors=1010
+             */
+            formatCreditCard() {
+                const spacelessCc = this.payment.cc_number.replace(/\D/g, "");
+                this.getCcType(spacelessCc);
+                this.payment.cc_number = this.formatCcNumber(spacelessCc);
+            },
+            getCcType(ccNum) {
+                for (var i in this.cardTypes) {
+                    const cardType = this.cardTypes[i];
+
+                    if (ccNum.match(cardType.pattern)) {
+                        this.payment.cc_type = cardType.type;
+                        this.state.cc_type = cardType;
+                        this.state.cc_security = cardType.code.size;
+                        return cardType;
+                    }
+                }
+
+                this.payment.cc_type = 'OT';
+                this.state.cc_type = null;
+                this.state.cc_security = 3;
+            },
+            formatCcNumber(ccNum) {
+                let numAppendedChars = 0;
+                let formattedNumber = "";
+                let cardFormatIndex = "";
+
+                if (!this.state.cc_type) {
+                    return ccNum;
+                }
+
+                let gaps = [...this.state.cc_type.gaps];
+                let gap  = gaps.shift();
+
+                for (var i = 0; i < ccNum.length; i++) {
+                    if (gap && i === gap) {
+                        formattedNumber += ' ';
+                        gap = gaps.shift();
+                    }
+
+                    formattedNumber += ccNum.charAt(i);
+                }
+
+                return formattedNumber;
+            },
+            expiryMonthRegex: /^\d{2}$/, // matches "MM"
+            expiryMonthSlashRegex: /^\d{2} \/$/, // matches "MM /"
+            expirySpacelessRegex: /^\d{2}\/\d+$/, // matches "MM/YYYY"
+            formatExpirySpacing() {
+                const isExpirySpaceless = this.expirySpacelessRegex.exec(this.payment.cc_exp);
+
+                if (isExpirySpaceless) {
+                    const parts = this.payment.cc_exp.split("/");
+                    this.payment.cc_exp = parts[0] + " / " + parts[1];
+                }
+            },
+            formatExpiration(e) {
+                const isMonthEntered = this.expiryMonthRegex.exec(this.payment.cc_exp);
+                const isMonthSlashEntered = this.expiryMonthSlashRegex.exec(this.payment.cc_exp);
+
+                if (isMonthSlashEntered && e.key === "Backspace") {
+                    this.payment.cc_exp = this.payment.cc_exp.slice(0, -3);
+                } else if (isMonthEntered && e.key >= 0 && e.key <= 9) {
+                    this.payment.cc_exp = this.payment.cc_exp + " / ";
+                }
+
+                this.formatExpirySpacing();
+            },
+            cardTypes: {$cardTypes}
+        }
+    }
+JS;
+?>
+<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('script', [], $inlineScript, false) ?>
+<?php else: ?>
+    <script><?= $inlineScript ?></script>
+<?php endif; ?>
+

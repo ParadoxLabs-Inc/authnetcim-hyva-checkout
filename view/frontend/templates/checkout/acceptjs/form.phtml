@@ -1,0 +1,234 @@
+<?php declare(strict_types=1);
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\PaymentIcons\ViewModel\PaymentIconsDark;
+use Magento\Framework\Escaper;
+use ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate;
+use ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\Authnetcim;
+use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
+
+/** @var CheckoutTemplate $block */
+/** @var Authnetcim $magewire */
+/** @var Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
+/** @var PaymentForm $formViewModel */
+/** @var \Hyva\PaymentIcons\ViewModel\PaymentIconsDark $paymentIcons */
+
+$code           = $escaper->escapeHtmlAttr($block->getData('method_code'));
+$formViewModel  = $viewModels->require(PaymentForm::class);
+$formBlock      = $formViewModel->getFormBlock($code);
+$method         = $formBlock->getMethod();
+$image          = $formBlock->getBrandingImage();
+$paymentIcons   = $viewModels->require(PaymentIconsDark::class);
+
+$typeIconMap = [
+    'AE' => 'americanExpress',
+    'DC' => 'dinersClub',
+    'DI' => 'discover',
+    'JCB' => 'jcb',
+    'MC' => 'mastercard',
+    'VI' => 'visa',
+    'UN' => 'unionpay',
+    'OT' => 'creditcard',
+];
+?>
+<div class="<?= $code ?>"
+     x-data="<?= $code ?>PaymentForm($el, $wire)"
+     x-init='initForm(<?= $escaper->escapeJsQuote(json_encode($block->getConfig())) ?>)'
+>
+    <?php if ($image): ?>
+        <div class="flex justify-end mb-2">
+            <img src="<?= $escaper->escapeUrl($image); ?>" alt="<?= $escaper->escapeHtmlAttr($method->getTitle()) ?>" />
+        </div>
+    <?php endif; ?>
+
+    <div class="field mb-2" x-show="Object.keys(storedCards).length > 0">
+        <label for="<?= $code ?>-card-id" class="block font-medium text-gray-700">
+            <?= $escaper->escapeHtml(__('Payment Information')) ?>
+        </label>
+        <select id="<?= $code ?>-card-id"
+                class="block w-full shadow-sm border-gray-300 rounded-md"
+                x-model="selectedCard"
+        >
+            <template x-for="storedCard in storedCards" :key="storedCard.hash">
+                <option :value="storedCard.hash"
+                        :data-type="storedCard.type"
+                        :selected="storedCard.hash === selectedCard"
+                        x-text="storedCard.label">
+                </option>
+            </template>
+            <option value=''><?= $escaper->escapeHtml(__('Add new card')) ?></option>
+        </select>
+
+        <?php if ($magewire->hasError('selectedCard')): ?>
+            <span class="text-red-800" id="selected-card-error">
+                <?= $escaper->escapeHtml($magewire->getError('selectedCard')) ?>
+            </span>
+        <?php endif ?>
+    </div>
+
+    <div class="card prose"
+         x-show="showForm"
+         x-cloak
+         wire:ignore
+    >
+        <div class="mb-2">
+            <label for="<?= $code ?>-cc-number" class="block font-medium text-gray-700">
+                <?= $escaper->escapeHtml(__('Card Number')) ?>
+            </label>
+            <div class="relative">
+                <input type="text"
+                       inputmode="numeric"
+                       title="<?= $escaper->escapeHtmlAttr(__('Card Number')) ?>"
+                       class="block w-full shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                       id="<?= $code ?>-cc-number"
+                       x-model="payment.cc_number"
+                       @keyup="formatCreditCard"
+                       @change.debounce="validateCcNumber"
+                       value=""
+                       autocomplete="cc-number"
+                       placeholder="0000 0000 0000 0000"
+                       spellcheck="false"
+                       minlength="13"
+                       maxlength="24"
+                       required
+                />
+                <div class="absolute top-0 right-0 p-1 pointer-events-none"
+                     x-show="payment.cc_type">
+                    <?php foreach($formBlock->getCcAvailableTypes() + ['OT' => 'Credit Card'] as $type => $label): ?>
+                        <?php if (!isset($typeIconMap[$type])) {continue;} ?>
+                        <?php $icon = $typeIconMap[$type] . 'Html'; ?>
+                        <?= $paymentIcons->{$icon}('', 48, 32, ["aria-label" => $label, 'x-show' => 'payment.cc_type=="' . $escaper->escapeHtmlAttr($type) . '"']) ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <div class="grid sm:grid-cols-2">
+            <div class="">
+                <label for="<?= $code ?>-cc-exp" class="block font-medium text-gray-700">
+                    <?= $escaper->escapeHtml(__('Card Expiration')) ?>
+                </label>
+                <input type="text"
+                       inputmode="numeric"
+                       title="<?= $escaper->escapeHtmlAttr(__('Card Expiration')) ?>"
+                       class="block w-32 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                       id="<?= $code ?>-cc-exp"
+                       name="payment[cc_exp]"
+                       x-model="payment.cc_exp"
+                       @keyup="formatExpiration"
+                       @change.debounce="validateExpiration"
+                       value=""
+                       autocomplete="cc-exp"
+                       placeholder="MM / YYYY"
+                       spellcheck="false"
+                       maxlength="9"
+                       required
+                />
+            </div>
+            <div class="">
+                <label for="<?= $code ?>-cc-cid"
+                       class="block font-medium text-gray-700"
+                       x-text="state.cc_type.code.name || 'CVV'"
+                ></label>
+                <input type="text"
+                       inputmode="numeric"
+                       title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
+                       class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                       id="<?= $code ?>-cc-cid"
+                       name="payment[cc_cid]"
+                       x-model="payment.cc_cid"
+                       @change.debounce="validateCvv"
+                       value=""
+                       autocomplete="cc-csc"
+                       :placeholder="state.cc_security === 4 ? '0000' : '000'"
+                       spellcheck="false"
+                       :minlength="state.cc_security"
+                       :maxlength="state.cc_security"
+                       required
+                />
+            </div>
+        </div>
+        <span class="text-red-600"
+              id="payment-error-general"
+              x-show="error.general"
+              x-text="error.general"
+        ></span>
+        <?php if (!$formBlock->isGuestCheckout()): ?>
+            <div x-show="showForm"
+                 x-cloak
+                 class="flex items-center gap-2 mt-2"
+            >
+                <?php if ((bool)$method->getConfigData('allow_unsaved')): ?>
+                    <input type="checkbox"
+                           title="<?= $escaper->escapeHtmlAttr(__('Save for next time')) ?>"
+                           class="cursor-pointer"
+                           id="<?= $code ?>-save"
+                           name="payment[save]"
+                           x-model="payment.save"
+                    />
+                    <label for="<?= $code ?>-save"
+                           class="block font-medium text-gray-700 cursor-pointer">
+                        <?= $escaper->escapeHtml(__('Save for next time')) ?>
+                    </label>
+                <?php else: ?>
+                    <p class="text-secondary mt-4 text-sm"><?= $escaper->escapeHtml(__('For your convenience, this data will be stored securely by our payment processor.')) ?></p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <?php if ($formBlock->hasVerification() && $method->getConfigData('require_ccv')): ?>
+        <div class=""
+             x-show="!showForm"
+             x-cloak
+        >
+            <label for="<?= $code ?>-cc-cid-saved"
+                   class="block font-medium text-gray-700"
+                   x-text="state.cc_type.code.name || 'CVV'"
+            ></label>
+            <input type="text"
+                   inputmode="numeric"
+                   title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
+                   class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                   id="<?= $code ?>-cc-cid-saved"
+                   name="payment[cc_cid]"
+                   x-model="payment.cc_cid"
+                   @change.debounce="validateCvv"
+                   value=""
+                   autocomplete="cc-csc"
+                   :placeholder="state.cc_security === 4 ? '0000' : '000'"
+                   spellcheck="false"
+                   :minlength="state.cc_security"
+                   :maxlength="state.cc_security"
+                   required
+            />
+
+            <?php if ($magewire->hasError('paymentCcCid')): ?>
+                <span class="text-red-800" id="payment-cc-cid-error">
+                    <?= $escaper->escapeHtml($magewire->getError('paymentCcCid')) ?>
+                </span>
+            <?php endif ?>
+        </div>
+    <?php endif; ?>
+
+    <?= $block->getChildHtml(); ?>
+</div>
