@@ -24,19 +24,4 @@ namespace ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment;
 class AuthnetcimAch extends Authnetcim
 {
     protected const METHOD_CODE = 'authnetcim_ach';
-
-    /**
-     * Determine whether all required fields are present
-     *
-     * @return bool
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    protected function isRequiredDataPresent(): bool
-    {
-        if (!empty($this->selectedCard) || !empty($this->transactionId)) {
-            return true;
-        }
-
-        return false;
-    }
 }

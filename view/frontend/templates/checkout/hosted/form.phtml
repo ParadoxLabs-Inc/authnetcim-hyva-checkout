@@ -40,7 +40,7 @@ $image          = $formBlock->getBrandingImage();
 ?>
 <div class="<?= $code ?>"
      x-data="<?= $code ?>PaymentForm($el, $wire)"
-     x-init="init()"
+     x-init='initForm(<?= $escaper->escapeJsQuote(json_encode($block->getConfig())) ?>)'
 >
     <?php if ($image): ?>
         <div class="flex justify-end mb-2">
@@ -60,12 +60,7 @@ $image          = $formBlock->getBrandingImage();
         </label>
         <select id="<?= $code ?>-card-id"
                 class="block w-full shadow-sm border-gray-300 rounded-md"
-                wire:model.defer="selectedCard"
-                wire:select.debounce.300ms.blur
                 x-model="selectedCard"
-                <?php if ($magewire->hasError('selectedCard')): ?>
-                    aria-invalid="true" aria-errormessage="selected-card-error"
-                <?php endif ?>
         >
             <template x-for="storedCard in storedCards" :key="storedCard.hash">
                 <option :value="storedCard.hash"
@@ -76,12 +71,6 @@ $image          = $formBlock->getBrandingImage();
             </template>
             <option value=''><?= $escaper->escapeHtml(__('Add new card')) ?></option>
         </select>
-
-        <?php if ($magewire->hasError('selectedCard')): ?>
-            <span class="text-red-800" id="selected-card-error">
-                <?= $escaper->escapeHtml($magewire->getError('selectedCard')) ?>
-            </span>
-        <?php endif ?>
     </div>
 
     <div class="card p-0"
@@ -107,24 +96,20 @@ $image          = $formBlock->getBrandingImage();
                 <?= $escaper->escapeHtml(__('Card Verification Number')) ?>
             </label>
             <input type="text"
+                   inputmode="numeric"
                    title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
-                   class="block w-16 shadow-sm border-gray-300 rounded-md"
+                   class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition text-center"
                    id="<?= $code ?>-cc-cid"
-                   wire:model.debounce.1500ms.blur="paymentCcCid"
+                   name="payment[cc_cid]"
+                   x-model="payment.cc_cid"
                    value=""
                    autocomplete="cc-csc"
-                   minlength="3"
-                   maxlength="4"
-                    <?php if ($magewire->hasError('paymentCcCid')): ?>
-                        aria-invalid="true" aria-errormessage="payment-cc-cid-error"
-                    <?php endif ?>
+                   :placeholder="state.cc_cid_length === 4 ? '____' : '___'"
+                   spellcheck="false"
+                   :minlength="state.cc_cid_length"
+                   :maxlength="state.cc_cid_length"
+                   required
             />
-
-            <?php if ($magewire->hasError('paymentCcCid')): ?>
-                <span class="text-red-800" id="payment-cc-cid-error">
-                    <?= $escaper->escapeHtml($magewire->getError('paymentCcCid')) ?>
-                </span>
-            <?php endif ?>
         </div>
     <?php endif; ?>
 

@@ -29,10 +29,23 @@ $code = $escaper->escapeJs($block->getData('method_code'));
 $inlineScript = <<<JS
     'use strict';
 
+    window.addEventListener('checkout:init:validation', event => {
+        hyvaCheckout.evaluation.registerValidator(
+            'validate{$code}',
+            async (element, component) => {
+                return new Promise((resolve, reject) => {
+                    window.dispatchEvent(
+                        new CustomEvent('checkout:validate:{$code}', {detail: {resolve, reject}})
+                    );
+                });
+            }
+        );
+    });
+
     const {$code}PaymentForm = (\$el, \$wire) => {
         return {
             storedCards: \$wire.entangle('storedCards'),
-            selectedCard: \$wire.entangle('selectedCard'),
+            selectedCard: '',
             communicatorActive: false,
             iframeInitialized: false,
             showHostedForm: true,
@@ -41,10 +54,32 @@ $inlineScript = <<<JS
             processingSave: false,
             timeoutReloader: null,
             timeoutCommunicator: null,
-            init: function() {
+            config: {},
+            payment: {
+                method: '{$code}',
+                card_id: '',
+                save: true,
+                transaction_id: '',
+                cc_cid: null
+            },
+            state: {
+                cc_cid_length: 3,
+                cc_type: '',
+            },
+            initForm: function(config) {
                 if (this.componentInitialized) {
                     return;
                 }
+
+                this.config = config;
+                this.selectedCard = config.selectedCard;
+                this.payment.card_id = config.selectedCard;
+                this.payment.save = config.defaultSaveCard;
+
+                window.addEventListener(
+                    'checkout:validate:{$code}',
+                    this.prepareSubmit.bind(this)
+                );
 
                 window.addEventListener('message', this.handleCommunication.bind(this));
                 document.addEventListener('checkout:payment:method-activate', this.toggleOrderButton.bind(this));
@@ -68,6 +103,13 @@ $inlineScript = <<<JS
             },
             changeSelectedCard: function() {
                 this.showHostedForm = this.selectedCard === '';
+                this.payment.card_id = this.selectedCard;
+
+                if (this.selectedCard !== '') {
+                    this.payment.transaction_id = '';
+                    this.state.cc_type = this.storedCards[this.selectedCard].type;
+                    this.state.cc_cid_length = this.state.cc_type === 'AE' ? 4 : 3;
+                }
 
                 if (this.iframeInitialized === false
                     && this.showHostedForm === true
@@ -190,20 +232,18 @@ $inlineScript = <<<JS
             handleResponse: function(response) {
                 if (response.createPaymentProfileResponse !== undefined
                     && response.createPaymentProfileResponse.success === 'true') {
-                    \$wire.set('saveCard', true, true);
+                    this.payment.save = true;
                 } else {
-                    \$wire.set('saveCard', false, true);
+                    this.payment.save = false;
                 }
+
+                this.payment.transaction_id = response.transId;
 
                 /**
                  * NOTE: To split iframe submission from Place Order (for steps after payment), nullify
                  * the functionality of this.toggleOrderButton() and this.placeMagentoOrder().
                  */
-                \$wire.set('transactionId', response.transId, true);
-                \$wire.call('submitTransaction')
-                    .then(this.placeOrder.bind(this));
-
-                this.iframeInitialized = false;
+                this.placeOrder();
             },
             handleSave: function(data) {
                 if (this.processingSave) {
@@ -219,13 +259,28 @@ $inlineScript = <<<JS
                 this.iframeInitialized = false;
                 this.processingSave = false;
 
+                this.selectedCard = Object.keys(this.storedCards).at(-1);
+                this.changeSelectedCard();
+
                 let cvvField = \$el.querySelector('#{$code}-cc-cid');
                 if (cvvField !== null) {
                     cvvField.focus();
                 }
             },
+            prepareSubmit: function(event) {
+                let payload = Object.assign({}, this.payment);
+
+                hyvaCheckout.storage.setValue(
+                    'payment',
+                    payload
+                );
+
+                if (event && event.detail && event.detail.resolve) {
+                    event.detail.resolve(true);
+                }
+            },
             placeOrder: function() {
-                hyvaCheckout.main.getWireComponent().placeOrder();
+                hyvaCheckout.order.place();
             },
             evaluateTerms: function() {
                 try {

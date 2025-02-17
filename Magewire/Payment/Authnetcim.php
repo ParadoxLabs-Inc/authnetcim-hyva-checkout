@@ -27,9 +27,7 @@ use Hyva\Checkout\Model\Magewire\Component\EvaluationResultInterface;
 use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
-use Magento\Quote\Model\ResourceModel\Quote\Payment;
 use Magewirephp\Magewire\Component\Form;
-use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 use ParadoxLabs\TokenBase\Block\Form\Cc;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
@@ -51,9 +49,6 @@ class Authnetcim extends Form implements EvaluationInterface
         'billing_address_submitted' => 'Loading payment form',
         'getNewCard' => 'Updating payment data',
         // 'initHostedForm' => 'Loading payment form',
-        'paymentCcCid' => 'Updating payment data',
-        'selectedCard' => 'Updating payment selection',
-        'submitTransaction' => 'Processing payment',
     ];
 
     /**
@@ -66,19 +61,12 @@ class Authnetcim extends Form implements EvaluationInterface
     ];
 
     /* Public component properties */
-    public $selectedCard = '';
-    public $paymentCcCid = '';
-    public $transactionId = '';
-    public $saveCard = false;
     public $storedCards = [];
 
     /* Protected property validation rule map */
     protected $rules = [
         'storedCards' => 'array',
         'selectedCard' => 'alpha_num',
-        'paymentCcCid' => 'numeric|digits_between:3,4',
-        'transactionId' => 'alpha_num',
-        'saveCard' => 'boolean',
     ];
 
     /**
@@ -107,11 +95,6 @@ class Authnetcim extends Form implements EvaluationInterface
     protected $helper;
 
     /**
-     * @var \Magento\Quote\Model\ResourceModel\Quote\Payment
-     */
-    protected $paymentResource;
-
-    /**
      * @var \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm
      */
     protected $formViewModel;
@@ -123,7 +106,6 @@ class Authnetcim extends Form implements EvaluationInterface
      * @param AcceptHostedService $acceptHostedService
      * @param \ParadoxLabs\TokenBase\Api\CardRepositoryInterface $cardRepository
      * @param \ParadoxLabs\TokenBase\Helper\Data $helper
-     * @param \Magento\Quote\Model\ResourceModel\Quote\Payment $paymentResource
      * @param \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm $formViewModel
      */
     public function __construct(
@@ -133,7 +115,6 @@ class Authnetcim extends Form implements EvaluationInterface
         AcceptHostedService $acceptHostedService,
         CardRepositoryInterface $cardRepository,
         Data $helper,
-        Payment $paymentResource,
         PaymentForm $formViewModel
     ) {
         parent::__construct($validator);
@@ -142,7 +123,6 @@ class Authnetcim extends Form implements EvaluationInterface
         $this->acceptHostedService = $acceptHostedService;
         $this->cardRepository = $cardRepository;
         $this->helper = $helper;
-        $this->paymentResource = $paymentResource;
         $this->acceptCustomerService = $acceptCustomerService;
         $this->formViewModel = $formViewModel;
     }
@@ -176,14 +156,11 @@ class Authnetcim extends Form implements EvaluationInterface
     {
         $payment = $this->getQuote()->getPayment();
 
-        $this->selectedCard = '';
-
         if ($payment->getData('tokenbase_id') !== null) {
             $card = $this->cardRepository->getById($payment->getData('tokenbase_id'));
 
             if ($card->getMethod() === static::METHOD_CODE
                 && (int)$card->getCustomerId() === (int)$this->getQuote()->getCustomerId()) {
-                $this->selectedCard = $card->getHash();
                 $this->addStoredCardToList($card);
             }
         }
@@ -225,99 +202,6 @@ class Authnetcim extends Form implements EvaluationInterface
     }
 
     /**
-     * Update the selected card value
-     *
-     * @param string|null $value
-     * @return mixed
-     */
-    public function updatedSelectedCard($value)
-    {
-        $this->validate();
-        $this->setPaymentData([
-            'card_id' => $value,
-            'cc_cid' => $this->paymentCcCid,
-        ]);
-
-        return $value;
-    }
-
-    /**
-     * Update the CC CID value
-     *
-     * @param string|null $value
-     * @return mixed
-     */
-    public function updatedPaymentCcCid($value)
-    {
-        $this->validate();
-        $this->setPaymentData([
-            'card_id' => $this->selectedCard,
-            'cc_cid' => $value,
-        ]);
-
-        return $value;
-    }
-
-    /**
-     * Update the transaction ID value
-     *
-     * @param string|null $value
-     * @return mixed
-     */
-    public function updatedSaveCard($value)
-    {
-        $this->validate();
-
-        return $value;
-    }
-
-    /**
-     * Update the transaction ID value
-     *
-     * @param string|null $value
-     * @return mixed
-     */
-    public function updatedTransactionId($value)
-    {
-        $this->validate();
-
-        return $value;
-    }
-
-    public function submitTransaction(): void
-    {
-        $this->setPaymentData([
-            'transaction_id' => $this->transactionId,
-            'save' => $this->saveCard,
-        ]);
-    }
-
-    /**
-     * Set payment data from the checkout form onto the payment model, validate, and save
-     *
-     * @param string|array $params
-     * @return void
-     */
-    protected function setPaymentData($params): void
-    {
-        $params['method'] = static::METHOD_CODE;
-
-        // Assign data to the quote payment object
-        /** @var \Magento\Quote\Model\Quote\Payment $payment */
-        $payment = $this->getQuote()->getPayment();
-        $payment->importData($params);
-        $payment->getMethodInstance()->validate();
-
-        // $this->checkoutSession->setStepData('payment', 'cc_cid', $params['cc_cid'] ?? null);
-
-        // Save the quote payment
-        if ($payment->hasDataChanges()) {
-            $payment->setUpdatedAt(date('c'));
-            $this->paymentResource->save($payment);
-        }
-    }
-
-    /**
      * Determine whether checkout completion is allowed
      *
      * @param \Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory $factory
@@ -325,11 +209,6 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     public function evaluateCompletion(EvaluationResultFactory $factory): EvaluationResultInterface
     {
-        // if (!$this->isRequiredDataPresent()) {
-        //     return $factory->createBlocking();
-        // }
-
-        // TODO: Handle validation success with hosted form
         $validationError = $factory->createErrorMessage();
         $validationError->withMessage('There\'s an issue with your payment details. Please check the payment form.');
 
@@ -337,34 +216,6 @@ class Authnetcim extends Form implements EvaluationInterface
         $validation->withFailureResult($validationError);
 
         return $validation;
-    }
-
-    /**
-     * Determine whether all required fields are present
-     *
-     * @return bool
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    protected function isRequiredDataPresent(): bool
-    {
-        // Stored card payment
-        // if (!empty($this->selectedCard)) {
-        //     // With CVV either present or not required
-        //     if (!empty($this->paymentCcCid) || $this->getMethod()->getConfigData('require_ccv') === false) {
-        //         return true;
-        //     }
-        // }
-
-        // New card payment
-        $formType = $this->getMethod()->getConfigData('form_type');
-        if ($formType === ConfigProvider::FORM_HOSTED && !empty($this->transactionId)) {
-            return true;
-        }
-        if ($formType === ConfigProvider::FORM_ACCEPTJS /*&& !empty($this->acceptJsValue)*/) {
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -426,7 +277,6 @@ class Authnetcim extends Form implements EvaluationInterface
         // Import new card
         $newCard = $this->acceptCustomerService->getCard();
 
-        $this->selectedCard  = $newCard->getHash();
         $this->addStoredCardToList($newCard);
     }
 

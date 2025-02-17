@@ -18,10 +18,4 @@
             </argument>
         </arguments>
     </type>
-
-    <type name="ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\PlaceOrderService">
-        <arguments>
-            <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
-        </arguments>
-    </type>
 </config>
