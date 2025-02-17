@@ -63,7 +63,7 @@ $inlineScript = <<<JS
                 cc_cid: null
             },
             state: {
-                cc_security: 3,
+                cc_cid_length: 3,
                 cc_length: 20,
                 cc_type: null,
             },
@@ -300,7 +300,7 @@ $inlineScript = <<<JS
             },
             validateCvv(e) {
                 const cvv = e.target.value;
-                const valid = (cvv.length === this.state.cc_security);
+                const valid = (cvv.length === this.state.cc_cid_length);
 
                 e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', this.state.cc_type.code.name));
                 if (!valid) {
@@ -325,14 +325,14 @@ $inlineScript = <<<JS
                     if (ccNum.match(cardType.pattern)) {
                         this.payment.cc_type = cardType.type;
                         this.state.cc_type = cardType;
-                        this.state.cc_security = cardType.code.size;
+                        this.state.cc_cid_length = cardType.code.size;
                         return cardType;
                     }
                 }
 
                 this.payment.cc_type = 'OT';
                 this.state.cc_type = null;
-                this.state.cc_security = 3;
+                this.state.cc_cid_length = 3;
             },
             formatCcNumber(ccNum) {
                 let numAppendedChars = 0;

@@ -152,17 +152,17 @@ $typeIconMap = [
                 <input type="text"
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
-                       class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                       class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition text-center"
                        id="<?= $code ?>-cc-cid"
                        name="payment[cc_cid]"
                        x-model="payment.cc_cid"
                        @change.debounce="validateCvv"
                        value=""
                        autocomplete="cc-csc"
-                       :placeholder="state.cc_security === 4 ? '0000' : '000'"
+                       :placeholder="state.cc_cid_length === 4 ? '0000' : '000'"
                        spellcheck="false"
-                       :minlength="state.cc_security"
-                       :maxlength="state.cc_security"
+                       :minlength="state.cc_cid_length"
+                       :maxlength="state.cc_cid_length"
                        required
                 />
             </div>
@@ -208,17 +208,17 @@ $typeIconMap = [
             <input type="text"
                    inputmode="numeric"
                    title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
-                   class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                   class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition text-center"
                    id="<?= $code ?>-cc-cid-saved"
                    name="payment[cc_cid]"
                    x-model="payment.cc_cid"
                    @change.debounce="validateCvv"
                    value=""
                    autocomplete="cc-csc"
-                   :placeholder="state.cc_security === 4 ? '0000' : '000'"
+                   :placeholder="state.cc_cid_length === 4 ? '0000' : '000'"
                    spellcheck="false"
-                   :minlength="state.cc_security"
-                   :maxlength="state.cc_security"
+                   :minlength="state.cc_cid_length"
+                   :maxlength="state.cc_cid_length"
                    required
             />
 

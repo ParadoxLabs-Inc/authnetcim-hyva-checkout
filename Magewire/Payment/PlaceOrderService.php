@@ -26,42 +26,38 @@ use Magento\Quote\Api\CartManagementInterface;
 
 class PlaceOrderService extends \Hyva\Checkout\Model\Magewire\Payment\AbstractPlaceOrderService
 {
-    /**
-     * @var \Magento\Checkout\Model\Session
-     */
-    protected $checkoutSession;
-
-    /**
-     * PlaceOrderService constructor.
-     *
-     * @param \Magento\Checkout\Model\Session $checkoutSession
-     */
-    public function __construct(
-        CartManagementInterface $cartManagement,
-        \Magento\Checkout\Model\Session $checkoutSession
-    ) {
-        parent::__construct($cartManagement);
-
-        $this->checkoutSession = $checkoutSession;
-    }
+    private const ALLOWED_KEYS = [
+        'method' => null,
+        'card_id' => null,
+        'save' => null,
+        'cc_number' => null,
+        'cc_type' => null,
+        'cc_exp_month' => null,
+        'cc_exp_year' => null,
+        'cc_cid' => null,
+        'cc_last4' => null,
+        'cc_bin' => null,
+        'transaction_id' => null,
+        'acceptjs_key' => null,
+        'acceptjs_value' => null,
+    ];
 
     /**
      * @throws CouldNotSaveException
      */
     public function placeOrder(\Magento\Quote\Model\Quote $quote): int
     {
-        // Load CVV in from session if present
-        // TODO: Handle this via $this->getData() instead of checkoutSession
-        // $ccCid = $this->checkoutSession->getStepData('payment', 'cc_cid');
-        // if (!empty($ccCid) && is_numeric((string)$ccCid)) {
-        //     $quote->getPayment()->setData('cc_cid', $ccCid);
-        // }
-
         $paymentData = $this->getData()->getPayment();
+
+        // Only pass through known allowed values, to prevent parameter injection
+        $knownPaymentData = array_intersect_key(
+            $paymentData,
+            self::ALLOWED_KEYS
+        );
 
         /** @var \Magento\Quote\Model\Quote\Payment $payment */
         $payment = $quote->getPayment();
-        $payment->setData($paymentData);
+        $payment->addData($knownPaymentData);
 
         return parent::placeOrder($quote);
     }
