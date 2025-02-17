@@ -1,5 +1,9 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 1.3.0 - Feb 17, 2025
+- Added Accept.js payment form support.
+- Improved performance of the Accept Hosted payment form, by reducing Magewire data saves.
+
 ## 1.2.0 - Jan 13, 2025
 - Added support for terms and conditions.
 - Fixed Magewire 'multiple roots' error.

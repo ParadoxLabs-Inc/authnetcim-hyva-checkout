@@ -24,7 +24,7 @@ Features
 Limitations
 ===========
 
-* Requires the 'Accept Hosted' iframe payment form at this time (no Accept.js or inline form support yet)
+* Requires Accept Hosted or Accept.js payment form (does not support untokenized inline credit card entry)
 * Does not yet implement the 'My Payment Options' customer account interface for stored card management
 
 Installation and Usage
