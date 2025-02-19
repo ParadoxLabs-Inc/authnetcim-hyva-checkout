@@ -54,7 +54,7 @@ $image          = $formBlock->getBrandingImage();
         </p>
     <?php endif; ?>
 
-    <div class="field mb-2" x-show="storedCards !== {}">
+    <div class="field mb-2" x-show="Object.keys(storedCards).length > 0" x-cloak>
         <label for="<?= $code ?>-card-id" class="block font-medium text-gray-700">
             <?= $escaper->escapeHtml(__('Payment Information')) ?>
         </label>

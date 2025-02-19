@@ -102,10 +102,10 @@ $inlineScript = <<<JS
                 this.componentInitialized = true;
             },
             changeSelectedCard: function() {
-                this.showHostedForm = this.selectedCard === '';
+                this.showHostedForm = !this.selectedCard;
                 this.payment.card_id = this.selectedCard;
 
-                if (this.selectedCard !== '') {
+                if (!!this.selectedCard) {
                     this.payment.transaction_id = '';
                     this.state.cc_type = this.storedCards[this.selectedCard].type;
                     this.state.cc_cid_length = this.state.cc_type === 'AE' ? 4 : 3;

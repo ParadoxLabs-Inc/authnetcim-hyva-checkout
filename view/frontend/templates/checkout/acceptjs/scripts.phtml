@@ -202,7 +202,7 @@ $inlineScript = <<<JS
                     payload.cc_last4 = cc_no.substring(cc_no.length - 4);
                     payload.cc_bin   = cc_no.substring(0, 6);
                     delete payload.cc_number;
-                } else if (this.payment.card_id !== '') {
+                } else if (!!this.payment.card_id) {
                     payload = {
                         method: payload.method,
                         card_id: payload.card_id,
@@ -218,16 +218,16 @@ $inlineScript = <<<JS
                 this.promise.resolve(true);
             },
             changeSelectedCard: function() {
-                this.showForm = this.selectedCard === '';
+                this.showForm = !this.selectedCard;
                 this.payment.card_id = this.selectedCard;
 
-                if (this.selectedCard !== '') {
+                if (!!this.selectedCard) {
                     this.payment.cc_number = '';
                     this.payment.cc_exp = '';
                 }
 
                 let cardType = this.cardTypes['OT'];
-                if (this.selectedCard !== ''
+                if (!!this.selectedCard
                     && this.storedCards[this.selectedCard].type
                     && this.cardTypes[this.storedCards[this.selectedCard].type]) {
                     cardType = this.cardTypes[this.storedCards[this.selectedCard].type];
@@ -264,7 +264,7 @@ $inlineScript = <<<JS
                     c += w.charAt(i * 2 + 1 - m) * 1;
                 }
 
-                const valid = s !== '' && (c % 10 === 0);
+                const valid = !!s && (c % 10 === 0);
 
                 e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Invalid credit card number.'))}");
                 if (!valid) {
