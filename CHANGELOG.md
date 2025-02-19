@@ -1,5 +1,8 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 1.3.1 - Feb 19, 2025
+- Fixed `hyva-themes/magento2-payment-icons` version constraint >= 2.0.
+
 ## 1.3.0 - Feb 17, 2025
 - Added Accept.js payment form support.
 - Improved performance of the Accept Hosted payment form, by reducing Magewire data saves.
