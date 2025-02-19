@@ -1,5 +1,8 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 1.3.2 - Feb 19, 2025
+- Fixed layout shift and no-stored-card conditions.
+
 ## 1.3.1 - Feb 19, 2025
 - Fixed `hyva-themes/magento2-payment-icons` version constraint >= 2.0.
 
