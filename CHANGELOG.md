@@ -1,5 +1,9 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 1.3.3 - Feb 20, 2025
+- Fixed incorrect parsing of two-digit expiration months.
+- Fixed payment validation messages never going away.
+
 ## 1.3.2 - Feb 19, 2025
 - Fixed layout shift and no-stored-card conditions.
 

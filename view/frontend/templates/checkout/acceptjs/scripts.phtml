@@ -151,8 +151,8 @@ $inlineScript = <<<JS
                 var paymentData = {
                     cardData: {
                         cardNumber: this.payment.cc_number.replace(/\D/g,''),
-                        month: this.payment.cc_exp_month,
-                        year: this.payment.cc_exp_year,
+                        month: this.payment.cc_exp_month.toString(),
+                        year: this.payment.cc_exp_year.toString(),
                         cardCode: this.payment.cc_cid
                     },
                     authData: {

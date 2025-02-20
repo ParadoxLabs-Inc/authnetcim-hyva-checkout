@@ -211,6 +211,7 @@ class Authnetcim extends Form implements EvaluationInterface
     {
         $validationError = $factory->createErrorMessage();
         $validationError->withMessage('There\'s an issue with your payment details. Please check the payment form.');
+        $validationError->withVisibilityDuration(5000);
 
         $validation = $factory->createValidation('validate' . static::METHOD_CODE);
         $validation->withFailureResult($validationError);
