@@ -1,5 +1,8 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 1.3.4 - Apr 23, 2025
+- Improved Accept.js payment form styling.
+
 ## 1.3.3 - Feb 20, 2025
 - Fixed incorrect parsing of two-digit expiration months.
 - Fixed payment validation messages never going away.
