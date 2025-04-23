@@ -86,7 +86,7 @@ $typeIconMap = [
         <?php endif ?>
     </div>
 
-    <div class="card prose"
+    <div class="card prose -m-4 mt-0 sm:m-0"
          x-show="showForm"
          wire:ignore
     >
@@ -123,7 +123,7 @@ $typeIconMap = [
                 </div>
             </div>
         </div>
-        <div class="grid sm:grid-cols-2">
+        <div class="grid grid-cols-2 gap-2">
             <div class="">
                 <label for="<?= $code ?>-cc-exp" class="block font-medium text-gray-700">
                     <?= $escaper->escapeHtml(__('Card Expiration')) ?>
