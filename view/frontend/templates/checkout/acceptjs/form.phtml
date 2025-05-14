@@ -62,7 +62,7 @@ $typeIconMap = [
     <?php endif; ?>
 
     <div class="field mb-2" x-show="Object.keys(storedCards).length > 0" x-cloak>
-        <label for="<?= $code ?>-card-id" class="block font-medium text-gray-700">
+        <label for="<?= $code ?>-card-id" class="label text-gray-700 text-sm">
             <?= $escaper->escapeHtml(__('Payment Information')) ?>
         </label>
         <select id="<?= $code ?>-card-id"
@@ -86,19 +86,19 @@ $typeIconMap = [
         <?php endif ?>
     </div>
 
-    <div class="card prose -m-4 mt-0 sm:m-0"
+    <div class="card prose -m-4 mt-0 sm:m-0 grid gap-4"
          x-show="showForm"
          wire:ignore
     >
-        <div class="mb-2">
-            <label for="<?= $code ?>-cc-number" class="block font-medium text-gray-700">
+        <div class="field required">
+            <label for="<?= $code ?>-cc-number" class="label text-gray-700 text-sm">
                 <?= $escaper->escapeHtml(__('Card Number')) ?>
             </label>
             <div class="relative">
                 <input type="text"
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Number')) ?>"
-                       class="block w-full shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                       class="block w-full shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition"
                        id="<?= $code ?>-cc-number"
                        x-model="payment.cc_number"
                        @keyup="formatCreditCard"
@@ -124,14 +124,14 @@ $typeIconMap = [
             </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-            <div class="">
-                <label for="<?= $code ?>-cc-exp" class="block font-medium text-gray-700">
+            <div class="field required">
+                <label for="<?= $code ?>-cc-exp" class="label text-gray-700 text-sm">
                     <?= $escaper->escapeHtml(__('Card Expiration')) ?>
                 </label>
                 <input type="text"
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Expiration')) ?>"
-                       class="block w-32 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition"
+                       class="block w-32 shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition"
                        id="<?= $code ?>-cc-exp"
                        name="payment[cc_exp]"
                        x-model="payment.cc_exp"
@@ -145,15 +145,15 @@ $typeIconMap = [
                        required
                 />
             </div>
-            <div class="">
+            <div class="field required">
                 <label for="<?= $code ?>-cc-cid"
-                       class="block font-medium text-gray-700"
+                       class="label text-gray-700 text-sm"
                        x-text="state.cc_type.code.name || 'CVV'"
                 ></label>
                 <input type="text"
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
-                       class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition text-center"
+                       class="block w-16 shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition text-center"
                        id="<?= $code ?>-cc-cid"
                        name="payment[cc_cid]"
                        x-model="payment.cc_cid"
@@ -187,7 +187,7 @@ $typeIconMap = [
                            x-model="payment.save"
                     />
                     <label for="<?= $code ?>-save"
-                           class="block font-medium text-gray-700 cursor-pointer">
+                           class="label text-gray-700 text-sm cursor-pointer">
                         <?= $escaper->escapeHtml(__('Save for next time')) ?>
                     </label>
                 <?php else: ?>
@@ -203,13 +203,13 @@ $typeIconMap = [
              x-cloak
         >
             <label for="<?= $code ?>-cc-cid-saved"
-                   class="block font-medium text-gray-700"
+                   class="label text-gray-700 text-sm"
                    x-text="state.cc_type.code.name || 'CVV'"
             ></label>
             <input type="text"
                    inputmode="numeric"
                    title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
-                   class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition text-center"
+                   class="block w-16 shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition text-center"
                    id="<?= $code ?>-cc-cid-saved"
                    name="payment[cc_cid]"
                    x-model="payment.cc_cid"

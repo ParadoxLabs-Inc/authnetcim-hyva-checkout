@@ -54,8 +54,8 @@ $image          = $formBlock->getBrandingImage();
         </p>
     <?php endif; ?>
 
-    <div class="field mb-2" x-show="Object.keys(storedCards).length > 0" x-cloak>
-        <label for="<?= $code ?>-card-id" class="block font-medium text-gray-700">
+    <div class="field required mb-2" x-show="Object.keys(storedCards).length > 0" x-cloak>
+        <label for="<?= $code ?>-card-id" class="label text-gray-700 text-sm">
             <?= $escaper->escapeHtml(__('Payment Information')) ?>
         </label>
         <select id="<?= $code ?>-card-id"
@@ -88,11 +88,11 @@ $image          = $formBlock->getBrandingImage();
     <?php endif; ?>
 
     <?php if ($formBlock->hasVerification() && $method->getConfigData('require_ccv')): ?>
-        <div class=""
+        <div class="field required"
              x-show="!showHostedForm"
              x-cloak
         >
-            <label for="<?= $code ?>-cc-cid" class="block font-medium text-gray-700">
+            <label for="<?= $code ?>-cc-cid" class="label text-gray-700 text-sm">
                 <?= $escaper->escapeHtml(__('Card Verification Number')) ?>
             </label>
             <input type="text"
