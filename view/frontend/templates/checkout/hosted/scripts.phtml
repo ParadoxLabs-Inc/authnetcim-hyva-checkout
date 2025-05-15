@@ -24,8 +24,9 @@ use Magento\Framework\View\Element\Template;
 
 /** @var Template $block */
 /** @var Escaper $escaper */
+/** @var Hyva\Theme\ViewModel\HyvaCsp $hyvaCsp */
 
-$code = $escaper->escapeJs($block->getData('method_code'));
+$code = $escaper->escapeJs($block->getMethodCode());
 $inlineScript = <<<JS
     'use strict';
 
@@ -42,9 +43,9 @@ $inlineScript = <<<JS
         );
     });
 
-    const {$code}PaymentForm = (\$el, \$wire) => {
+    function {$code}PaymentForm() {
         return {
-            storedCards: \$wire.entangle('storedCards'),
+            storedCards: this.\$wire.entangle('storedCards'),
             selectedCard: '',
             communicatorActive: false,
             iframeInitialized: false,
@@ -71,10 +72,10 @@ $inlineScript = <<<JS
                     return;
                 }
 
-                this.config = config;
-                this.selectedCard = config.selectedCard;
-                this.payment.card_id = config.selectedCard;
-                this.payment.save = config.defaultSaveCard;
+                this.config = JSON.parse(this.\$el.dataset.config);
+                this.selectedCard = this.config.selectedCard;
+                this.payment.card_id = this.config.selectedCard;
+                this.payment.save = this.config.defaultSaveCard;
 
                 window.addEventListener(
                     'checkout:validate:{$code}',
@@ -124,7 +125,7 @@ $inlineScript = <<<JS
                 clearTimeout(this.timeoutReloader);
                 clearTimeout(this.timeoutCommunicator);
 
-                \$wire.call('initHostedForm');
+                this.\$wire.call('initHostedForm');
             },
             toggleOrderButton: function(event) {
                 let method = event && event.detail
@@ -132,19 +133,19 @@ $inlineScript = <<<JS
                              : document.querySelector('input[name="payment-method-option"]:checked').value;
 
                 if (method === '{$code}' && this.showHostedForm) {
-                    document.querySelector('.btn-primary[x-bind="buttonPlaceOrder()"]').style.display = 'none';
+                    document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]').style.display = 'none';
                 } else {
-                    document.querySelector('.btn-primary[x-bind="buttonPlaceOrder()"]').style.display = 'block';
+                    document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]').style.display = 'block';
                 }
             },
             loadHostedForm: function(event) {
-                if (\$el.isConnected === false) {
+                if (this.\$el.isConnected === false) {
                     return;
                 }
 
                 let data = event.detail;
 
-                var iframe = \$el.querySelector('iframe');
+                var iframe = this.\$el.querySelector('iframe');
 
                 var form = document.createElement('form');
                 form.target = iframe.name;
@@ -159,7 +160,7 @@ $inlineScript = <<<JS
                     form.appendChild(input);
                 }
 
-                \$el.appendChild(form);
+                this.\$el.appendChild(form);
                 form.submit();
 
                 // Reload the hosted form when it expires
@@ -170,8 +171,9 @@ $inlineScript = <<<JS
                 this.timeoutCommunicator = setTimeout(this.checkCommunicator.bind(this), 20*1000);
 
                 // There's an awkward break between 400-750px; set max width to avoid scrolling.
-                if (iframe.innerWidth > 400 && iframe.innerWidth < 750) {
+                if (iframe.scrollWidth > 400 && iframe.scrollWidth < 750) {
                     iframe.style.maxWidth = '400px';
+                    iframe.style.margin   = '0 auto';
                 }
 
                 this.iframeInitialized = true;
@@ -191,7 +193,7 @@ $inlineScript = <<<JS
                 }
 
                 console.error('No message received from communicator.');
-                \$wire.call('notifyCommunicatorFailure');
+                this.\$wire.call('notifyCommunicatorFailure');
             },
             handleCommunication: function(event) {
                 if (!event.data
@@ -224,7 +226,7 @@ $inlineScript = <<<JS
                     case 'resizeWindow':
                         if (event.data.height > 0) {
                             var height = Math.ceil(parseFloat(event.data.height)) + 80;
-                            \$el.querySelector('iframe').style.height = height + 'px';
+                            this.\$el.querySelector('iframe').style.height = height + 'px';
                         }
                         break;
                 }
@@ -252,7 +254,7 @@ $inlineScript = <<<JS
 
                 this.processingSave = true;
 
-                \$wire.call('getNewCard', data)
+                this.\$wire.call('getNewCard', data)
                     .then(this.afterAddCard.bind(this));
             },
             afterAddCard: function(data) {
@@ -262,7 +264,7 @@ $inlineScript = <<<JS
                 this.selectedCard = Object.keys(this.storedCards).at(-1);
                 this.changeSelectedCard();
 
-                let cvvField = \$el.querySelector('#{$code}-cc-cid');
+                let cvvField = this.\$el.querySelector('#{$code}-cc-cid');
                 if (cvvField !== null) {
                     cvvField.focus();
                 }
@@ -298,14 +300,47 @@ $inlineScript = <<<JS
                 this.showTermsNotice = false;
 
                 this.changeSelectedCard();
-            }
+            },
+            validateCvv(e) {
+                const cvv = e.target.value;
+                const valid = (cvv.length === this.state.cc_cid_length);
+
+                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', this.state.cc_type.code.name));
+                if (!valid) {
+                    e.target.reportValidity();
+                }
+
+                return this.setCcCid();
+            },
+            getCcCid() {return this.payment.cc_cid},
+            getCcCidLabel() {return (this.state.cc_type?.code.name || 'CVV') + ' '},
+            getCcCidLength() {return this.state.cc_cid_length},
+            getCcCidPlaceholder() {return this.state.cc_cid_length === 4 ? '0000' : '000'},
+            hideHostedForm() {return !this.showHostedForm},
+            hideTermsNotice() {return !this.showTermsNotice},
+            isStoredCardSelected() {return this.storedCard.hash === this.selectedCard},
+            setCcCid() {return this.payment.cc_cid = this.\$el.value},
+            setSelectedCard() {return this.selectedCard = this.\$el.value},
+            showStoredCards() {return Object.keys(this.storedCards).length > 0},
         }
     }
+
+    window.addEventListener('alpine:init', () => Alpine.data('{$code}PaymentForm', {$code}PaymentForm), {once: true});
 JS;
 ?>
-<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
-    <?= /* @noEscape */ $secureRenderer->renderTag('script', [], $inlineScript, false) ?>
-<?php else: ?>
-    <script><?= $inlineScript ?></script>
-<?php endif; ?>
+<script><?= $inlineScript ?></script>
+<?php $hyvaCsp->registerInlineScript() ?>
 
+<?php $inlineStyle = <<<CSS
+    \#{$code}_iframe {
+        min-width: 300px;
+        height: 400px;
+        border: 0;
+    }
+CSS;
+?>
+<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('style', [], $inlineStyle, false) ?>
+<?php else: ?>
+    <style><?= $inlineStyle ?></style>
+<?php endif; ?>

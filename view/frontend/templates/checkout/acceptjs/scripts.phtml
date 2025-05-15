@@ -24,8 +24,9 @@ use ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate;
 
 /** @var CheckoutTemplate $block */
 /** @var Escaper $escaper */
+/** @var Hyva\Theme\ViewModel\HyvaCsp $hyvaCsp */
 
-$code = $escaper->escapeJs($block->getData('method_code'));
+$code = $escaper->escapeJs($block->getMethodCode());
 $cardTypes = json_encode($block->getCcTypes());
 
 $inlineScript = <<<JS
@@ -44,9 +45,9 @@ $inlineScript = <<<JS
         );
     });
 
-    const {$code}PaymentForm = (\$el, \$wire) => {
+    function {$code}PaymentForm() {
         return {
-            storedCards: \$wire.entangle('storedCards'),
+            storedCards: this.\$wire.entangle('storedCards'),
             selectedCard: '',
             componentInitialized: false,
             showForm: true,
@@ -85,15 +86,15 @@ $inlineScript = <<<JS
                 'E_WC_21': 'API credentials invalid. If you are an administrator, please correct the API Login ID and'
                            + ' Client Key.'
             },
-            initForm: function(config) {
+            initForm: function() {
                 if (this.componentInitialized) {
                     return;
                 }
 
-                this.config = config;
-                this.selectedCard = config.selectedCard;
-                this.payment.card_id = config.selectedCard;
-                this.payment.save = config.defaultSaveCard;
+                this.config = JSON.parse(this.\$el.dataset.config);
+                this.selectedCard = this.config.selectedCard;
+                this.payment.card_id = this.config.selectedCard;
+                this.payment.save = this.config.defaultSaveCard;
 
                 window.addEventListener(
                     'checkout:validate:{$code}',
@@ -226,14 +227,16 @@ $inlineScript = <<<JS
                     this.payment.cc_exp = '';
                 }
 
-                let cardType = this.cardTypes['OT'];
+                const cardTypes = this.cardTypes();
+                let cardType = cardTypes['OT'];
                 if (!!this.selectedCard
                     && this.storedCards[this.selectedCard].type
-                    && this.cardTypes[this.storedCards[this.selectedCard].type]) {
-                    cardType = this.cardTypes[this.storedCards[this.selectedCard].type];
+                    && cardTypes[this.storedCards[this.selectedCard].type]) {
+                    cardType = cardTypes[this.storedCards[this.selectedCard].type];
                 }
                 this.payment.cc_type = cardType.type;
                 this.state.cc_type = cardType;
+                this.state.cc_cid_length = cardType.code.size;
             },
             validateCcNumber(e) {
                 var s = e.target.value;
@@ -306,6 +309,8 @@ $inlineScript = <<<JS
                 if (!valid) {
                     e.target.reportValidity();
                 }
+
+                return this.setCcCid();
             },
             /**
              * Card formatting solution based on 'Credit Card type auto-detection & format w/ Alpine.js'
@@ -314,13 +319,16 @@ $inlineScript = <<<JS
              * @pen: https://codepen.io/pixleight/pen/OJXGazo?editors=1010
              */
             formatCreditCard() {
+                this.payment.cc_number = this.\$el.value || '';
+
                 const spacelessCc = this.payment.cc_number.replace(/\D/g, "");
-                this.getCcType(spacelessCc);
-                this.payment.cc_number = this.formatCcNumber(spacelessCc);
+                this.detectCcType(spacelessCc);
+                this.\$el.value = this.payment.cc_number = this.formatCcNumber(spacelessCc);
             },
-            getCcType(ccNum) {
-                for (var i in this.cardTypes) {
-                    const cardType = this.cardTypes[i];
+            detectCcType(ccNum) {
+                const cardTypes = this.cardTypes();
+                for (var i in cardTypes) {
+                    const cardType = cardTypes[i];
 
                     if (ccNum.match(cardType.pattern)) {
                         this.payment.cc_type = cardType.type;
@@ -369,6 +377,8 @@ $inlineScript = <<<JS
                 }
             },
             formatExpiration(e) {
+                this.payment.cc_exp = this.\$el.value || '';
+
                 const isMonthEntered = this.expiryMonthRegex.exec(this.payment.cc_exp);
                 const isMonthSlashEntered = this.expiryMonthSlashRegex.exec(this.payment.cc_exp);
 
@@ -379,15 +389,34 @@ $inlineScript = <<<JS
                 }
 
                 this.formatExpirySpacing();
+
+                return this.\$el.value = this.payment.cc_exp;
             },
-            cardTypes: {$cardTypes}
+            getCcCid() {return this.payment.cc_cid},
+            getCcCidLabel() {return (this.state.cc_type.code.name || 'CVV') + ' '},
+            getCcCidLength() {return this.state.cc_cid_length},
+            getCcCidPlaceholder() {return this.state.cc_cid_length === 4 ? '0000' : '000'},
+            getCcExp() {return this.payment.cc_exp},
+            getCcNumber() {return this.payment.cc_number},
+            getCcSave() {return this.payment.save},
+            getCcType() {return this.payment.cc_type},
+            getErrorMessage() {return this.error.general},
+            hideForm() {return !this.showForm},
+            isCcTypeActive() {return this.payment.cc_type === this.\$el.dataset.type},
+            isStoredCardSelected() {return this.storedCard.hash === this.selectedCard},
+            setCcCid() {return this.payment.cc_cid = this.\$el.value},
+            setCcExp() {return this.payment.cc_exp = this.\$el.value},
+            setCcNumber() {return this.payment.cc_number = this.\$el.value},
+            setSave() {return this.payment.save = this.\$el.value ? 1 : 0},
+            setSelectedCard() {return this.selectedCard = this.\$el.value},
+            showCcType() {return this.payment.cc_type},
+            showStoredCards() {return Object.keys(this.storedCards).length > 0},
+            cardTypes() {return {$cardTypes}}
         }
     }
+
+    window.addEventListener('alpine:init', () => Alpine.data('{$code}PaymentForm', {$code}PaymentForm), {once: true});
 JS;
 ?>
-<?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
-    <?= /* @noEscape */ $secureRenderer->renderTag('script', [], $inlineScript, false) ?>
-<?php else: ?>
-    <script><?= $inlineScript ?></script>
-<?php endif; ?>
-
+<script><?= $inlineScript ?></script>
+<?php $hyvaCsp->registerInlineScript() ?>

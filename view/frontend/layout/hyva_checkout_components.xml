@@ -32,7 +32,7 @@
                 </arguments>
             </block>
         </referenceBlock>
-        <referenceContainer name="hyva.checkout.init-validation.after">
+        <referenceContainer name="magewire.plugin.scripts">
             <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="script-authnetcim" ifconfig="payment/authnetcim/active">
                 <arguments>
                     <argument name="method_code" xsi:type="string">authnetcim</argument>

@@ -60,7 +60,7 @@ class CheckoutTemplate extends \Magento\Framework\View\Element\Template
     public function getTemplate()
     {
         $method    = $this->paymentForm->getMethod($this->getMethodCode());
-        $formType  = (string)($method->getConfigData('form_type') ?? ConfigProvider::FORM_HOSTED);
+        $formType  = (string)($method->getConfigData('form_type') ?: ConfigProvider::FORM_HOSTED);
         $templates = (array)$this->getData('form_template');
 
         if (isset($templates[$formType])) {
