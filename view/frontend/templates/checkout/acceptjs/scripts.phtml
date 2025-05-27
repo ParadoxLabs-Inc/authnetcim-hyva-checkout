@@ -19,6 +19,9 @@
  * @link https://support.paradoxlabs.com
  */
 
+// PHPCS reports a false positive from JS "delete" code. It's not SQL.
+// phpcs:disable Magento2.SQL.RawQuery.FoundRawSql
+
 use Magento\Framework\Escaper;
 use ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate;
 
@@ -418,5 +421,5 @@ $inlineScript = <<<JS
     window.addEventListener('alpine:init', () => Alpine.data('{$code}PaymentForm', {$code}PaymentForm), {once: true});
 JS;
 ?>
-<script><?= $inlineScript ?></script>
+<script><?= /* @noEscape */ $inlineScript ?></script>
 <?php $hyvaCsp->registerInlineScript() ?>

@@ -51,8 +51,8 @@ $typeIconMap = [
     'OT' => 'creditcard',
 ];
 ?>
-<div class="<?= $code ?>"
-     x-data="<?= $code ?>PaymentForm"
+<div class="<?= /* @noEscape */ $code ?>"
+     x-data="<?= /* @noEscape */ $code ?>PaymentForm"
      x-init="initForm"
      data-config='<?= $escaper->escapeJsQuote(json_encode($block->getConfig())) ?>'
 >
@@ -63,10 +63,10 @@ $typeIconMap = [
     <?php endif; ?>
 
     <div class="field required mb-2" x-show="showStoredCards" x-cloak>
-        <label for="<?= $code ?>-card-id" class="label text-gray-700 text-sm">
+        <label for="<?= /* @noEscape */ $code ?>-card-id" class="label text-gray-700 text-sm">
             <?= $escaper->escapeHtml(__('Payment Information')) ?>
         </label>
-        <select id="<?= $code ?>-card-id"
+        <select id="<?= /* @noEscape */ $code ?>-card-id"
                 class="block w-full shadow-sm border-gray-300 rounded-md"
                 :value="selectedCard"
                 @change="setSelectedCard"
@@ -93,7 +93,7 @@ $typeIconMap = [
          wire:ignore
     >
         <div class="field required">
-            <label for="<?= $code ?>-cc-number" class="label text-gray-700 text-sm">
+            <label for="<?= /* @noEscape */ $code ?>-cc-number" class="label text-gray-700 text-sm">
                 <?= $escaper->escapeHtml(__('Card Number')) ?>
             </label>
             <div class="relative">
@@ -101,7 +101,7 @@ $typeIconMap = [
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Number')) ?>"
                        class="block w-full shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition"
-                       id="<?= $code ?>-cc-number"
+                       id="<?= /* @noEscape */ $code ?>-cc-number"
                        :value="payment.cc_number"
                        @keyup="formatCreditCard"
                        @change="validateCcNumber"
@@ -120,21 +120,21 @@ $typeIconMap = [
                     <?php foreach($formBlock->getCcAvailableTypes() + ['OT' => 'Credit Card'] as $type => $label): ?>
                         <?php if (!isset($typeIconMap[$type])) {continue;} ?>
                         <?php $icon = $typeIconMap[$type] . 'Html'; ?>
-                        <?= $paymentIcons->{$icon}('', 48, 32, ["aria-label" => $label, 'data-type' => $escaper->escapeHtmlAttr($type), 'x-show' => 'isCcTypeActive']) ?>
+                        <?= /* @noEscape */ $paymentIcons->{$icon}('', 48, 32, ["aria-label" => $label, 'data-type' => $escaper->escapeHtmlAttr($type), 'x-show' => 'isCcTypeActive']) ?>
                     <?php endforeach; ?>
                 </div>
             </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
             <div class="field required">
-                <label for="<?= $code ?>-cc-exp" class="label text-gray-700 text-sm">
+                <label for="<?= /* @noEscape */ $code ?>-cc-exp" class="label text-gray-700 text-sm">
                     <?= $escaper->escapeHtml(__('Card Expiration')) ?>
                 </label>
                 <input type="text"
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Expiration')) ?>"
                        class="block w-32 shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition"
-                       id="<?= $code ?>-cc-exp"
+                       id="<?= /* @noEscape */ $code ?>-cc-exp"
                        name="payment[cc_exp]"
                        :value="payment.cc_exp"
                        @keyup="formatExpiration"
@@ -148,7 +148,7 @@ $typeIconMap = [
                 />
             </div>
             <div class="field required">
-                <label for="<?= $code ?>-cc-cid"
+                <label for="<?= /* @noEscape */ $code ?>-cc-cid"
                        class="label text-gray-700 text-sm"
                        x-text="getCcCidLabel"
                 ></label>
@@ -156,7 +156,7 @@ $typeIconMap = [
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
                        class="block w-16 shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition text-center"
-                       id="<?= $code ?>-cc-cid"
+                       id="<?= /* @noEscape */ $code ?>-cc-cid"
                        name="payment[cc_cid]"
                        :value="payment.cc_cid"
                        @change="validateCvv"
@@ -184,12 +184,12 @@ $typeIconMap = [
                     <input type="checkbox"
                            title="<?= $escaper->escapeHtmlAttr(__('Save for next time')) ?>"
                            class="cursor-pointer"
-                           id="<?= $code ?>-save"
+                           id="<?= /* @noEscape */ $code ?>-save"
                            name="payment[save]"
                            :value="payment.save"
                            @change="setSave"
                     />
-                    <label for="<?= $code ?>-save"
+                    <label for="<?= /* @noEscape */ $code ?>-save"
                            class="label text-gray-700 text-sm cursor-pointer">
                         <?= $escaper->escapeHtml(__('Save for next time')) ?>
                     </label>
@@ -205,7 +205,7 @@ $typeIconMap = [
              x-show="hideForm"
              x-cloak
         >
-            <label for="<?= $code ?>-cc-cid-saved"
+            <label for="<?= /* @noEscape */ $code ?>-cc-cid-saved"
                    class="label text-gray-700 text-sm"
                    x-text="getCcCidLabel"
             >
@@ -215,7 +215,7 @@ $typeIconMap = [
                    inputmode="numeric"
                    title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
                    class="block w-16 shadow-sm border-gray-300 rounded-md font-mono leading-normal tracking-wider transition text-center"
-                   id="<?= $code ?>-cc-cid-saved"
+                   id="<?= /* @noEscape */ $code ?>-cc-cid-saved"
                    name="payment[cc_cid]"
                    :value="payment.cc_cid"
                    @change="validateCvv"

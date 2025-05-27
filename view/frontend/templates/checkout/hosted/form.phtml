@@ -38,8 +38,8 @@ $formBlock      = $formViewModel->getFormBlock($code);
 $method         = $formBlock->getMethod();
 $image          = $formBlock->getBrandingImage();
 ?>
-<div class="<?= $code ?>"
-     x-data="<?= $code ?>PaymentForm"
+<div class="<?= /* @noEscape */ $code ?>"
+     x-data="<?= /* @noEscape */ $code ?>PaymentForm"
      x-init="initForm"
      data-config='<?= $escaper->escapeJsQuote(json_encode($block->getConfig())) ?>'
 >
@@ -56,10 +56,10 @@ $image          = $formBlock->getBrandingImage();
     <?php endif; ?>
 
     <div class="field required mb-2" x-show="showStoredCards" x-cloak>
-        <label for="<?= $code ?>-card-id" class="label text-gray-700 text-sm">
+        <label for="<?= /* @noEscape */ $code ?>-card-id" class="label text-gray-700 text-sm">
             <?= $escaper->escapeHtml(__('Payment Information')) ?>
         </label>
-        <select id="<?= $code ?>-card-id"
+        <select id="<?= /* @noEscape */ $code ?>-card-id"
                 class="block w-full shadow-sm border-gray-300 rounded-md"
                 :value="selectedCard"
                 @change="setSelectedCard"
@@ -79,7 +79,7 @@ $image          = $formBlock->getBrandingImage();
          x-show="showHostedForm"
          wire:ignore
     >
-        <iframe src="about:blank" id="<?= $code ?>_iframe" name="<?= $code ?>_iframe" class="w-full" x-show="hideTermsNotice" x-cloak></iframe>
+        <iframe src="about:blank" id="<?= /* @noEscape */ $code ?>_iframe" name="<?= /* @noEscape */ $code ?>_iframe" class="w-full" x-show="hideTermsNotice" x-cloak></iframe>
         <p x-show="showTermsNotice" x-cloak class="text-secondary p-4"><?= $escaper->escapeHtml(__('Please accept the %1 to complete payment.', __('Terms and Conditions'))) ?></p>
     </div>
 
@@ -94,7 +94,7 @@ $image          = $formBlock->getBrandingImage();
              x-show="hideHostedForm"
              x-cloak
         >
-            <label for="<?= $code ?>-cc-cid"
+            <label for="<?= /* @noEscape */ $code ?>-cc-cid"
                    class="label text-gray-700 text-sm"
             >
                 <?= $escaper->escapeHtml(__('Card Verification Number')) ?>
@@ -103,7 +103,7 @@ $image          = $formBlock->getBrandingImage();
                    inputmode="numeric"
                    title="<?= $escaper->escapeHtmlAttr(__('Card Verification Number')) ?>"
                    class="block w-16 shadow-sm border-gray-300 rounded-md font-mono font-medium leading-normal tracking-wider transition text-center"
-                   id="<?= $code ?>-cc-cid"
+                   id="<?= /* @noEscape */ $code ?>-cc-cid"
                    name="payment[cc_cid]"
                    :value="payment.cc_cid"
                    @change="validateCvv"

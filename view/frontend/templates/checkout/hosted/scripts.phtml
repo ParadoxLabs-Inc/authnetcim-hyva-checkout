@@ -328,7 +328,7 @@ $inlineScript = <<<JS
     window.addEventListener('alpine:init', () => Alpine.data('{$code}PaymentForm', {$code}PaymentForm), {once: true});
 JS;
 ?>
-<script><?= $inlineScript ?></script>
+<script><?= /* @noEscape */ $inlineScript ?></script>
 <?php $hyvaCsp->registerInlineScript() ?>
 
 <?php $inlineStyle = <<<CSS
@@ -342,5 +342,5 @@ CSS;
 <?php if (isset($secureRenderer) && $secureRenderer instanceof \Magento\Framework\View\Helper\SecureHtmlRenderer): ?>
     <?= /* @noEscape */ $secureRenderer->renderTag('style', [], $inlineStyle, false) ?>
 <?php else: ?>
-    <style><?= $inlineStyle ?></style>
+    <style><?= /* @noEscape */ $inlineStyle ?></style>
 <?php endif; ?>
