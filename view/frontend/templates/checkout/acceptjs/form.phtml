@@ -97,6 +97,7 @@ $typeIconMap = [
                 <?= $escaper->escapeHtml(__('Card Number')) ?>
             </label>
             <div class="relative">
+                <input type="text" class="hidden" autocomplete="cc-type" />
                 <input type="text"
                        inputmode="numeric"
                        title="<?= $escaper->escapeHtmlAttr(__('Card Number')) ?>"

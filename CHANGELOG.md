@@ -1,5 +1,9 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 2.0.1 - May 28, 2025
+- Fixed CC autocomplete selecting stored cards.
+- Fixed PHPCS warnings (all false positives).
+
 ## 2.0.0 - May 15, 2025: Hyva Checkout/Alpine CSP support
 **WARNING: Templates changed substantially. Any theme overrides must be updated.**
 - Added support for Alpine CSP and Hyva Checkout CSP.
