@@ -45,7 +45,7 @@ $image          = $formBlock->getBrandingImage();
 >
     <?php if ($image): ?>
         <div class="flex justify-end mb-2">
-            <img src="<?= $escaper->escapeUrl($image); ?>" alt="<?= $escaper->escapeHtmlAttr($method->getTitle()) ?>" />
+            <img src="<?= $escaper->escapeHtmlAttr($image); ?>" alt="<?= $escaper->escapeHtmlAttr($method->getTitle()) ?>" />
         </div>
     <?php endif; ?>
 
