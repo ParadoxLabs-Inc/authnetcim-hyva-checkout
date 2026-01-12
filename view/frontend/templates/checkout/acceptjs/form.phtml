@@ -118,7 +118,7 @@ $typeIconMap = [
                      x-show="showCcType"
                      x-cloak
                 >
-                    <?php foreach($formBlock->getCcAvailableTypes() + ['OT' => 'Credit Card'] as $type => $label): ?>
+                    <?php foreach ($formBlock->getCcAvailableTypes() + ['OT' => 'Credit Card'] as $type => $label): ?>
                         <?php if (!isset($typeIconMap[$type])) {continue;} ?>
                         <?php $icon = $typeIconMap[$type] . 'Html'; ?>
                         <?= /* @noEscape */ $paymentIcons->{$icon}('', 48, 32, ["aria-label" => $label, 'data-type' => $escaper->escapeHtmlAttr($type), 'x-show' => 'isCcTypeActive']) ?>
