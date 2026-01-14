@@ -120,5 +120,5 @@ $image          = $formBlock->getBrandingImage();
         </div>
     <?php endif; ?>
 
-    <?= $block->getChildHtml(); ?>
+    <?= /* @noEscape */ $block->getChildHtml(); ?>
 </div>

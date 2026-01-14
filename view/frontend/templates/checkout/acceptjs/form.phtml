@@ -237,5 +237,5 @@ $typeIconMap = [
         </div>
     <?php endif; ?>
 
-    <?= $block->getChildHtml(); ?>
+    <?= /* @noEscape */ $block->getChildHtml(); ?>
 </div>
