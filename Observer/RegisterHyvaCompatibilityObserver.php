@@ -17,8 +17,9 @@ class RegisterHyvaCompatibilityObserver implements ObserverInterface
      *
      * @param ComponentRegistrar $componentRegistrar
      */
-    public function __construct(private ComponentRegistrar $componentRegistrar)
-    {
+    public function __construct(
+        private readonly ComponentRegistrar $componentRegistrar
+    ) {
     }
 
     public function execute(Observer $event)
