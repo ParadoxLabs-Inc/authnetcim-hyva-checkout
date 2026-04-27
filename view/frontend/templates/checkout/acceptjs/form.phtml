@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /**
  * Copyright © 2023-present ParadoxLabs, Inc.
  *
@@ -19,8 +20,8 @@
  * @link https://support.paradoxlabs.com
  */
 
-use Hyva\Theme\Model\ViewModelRegistry;
 use Hyva\PaymentIcons\ViewModel\PaymentIconsDark;
+use Hyva\Theme\Model\ViewModelRegistry;
 use Magento\Framework\Escaper;
 use ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate;
 use ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\Authnetcim;
@@ -33,12 +34,12 @@ use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
 /** @var PaymentForm $formViewModel */
 /** @var \Hyva\PaymentIcons\ViewModel\PaymentIconsDark $paymentIcons */
 
-$code           = $escaper->escapeHtmlAttr($block->getData('method_code'));
-$formViewModel  = $viewModels->require(PaymentForm::class);
-$formBlock      = $formViewModel->getFormBlock($code);
-$method         = $formBlock->getMethod();
-$image          = $formBlock->getBrandingImage();
-$paymentIcons   = $viewModels->require(PaymentIconsDark::class);
+$code = $escaper->escapeHtmlAttr($block->getData('method_code'));
+$formViewModel = $viewModels->require(PaymentForm::class);
+$formBlock = $formViewModel->getFormBlock($code);
+$method = $formBlock->getMethod();
+$image = $formBlock->getBrandingImage();
+$paymentIcons = $viewModels->require(PaymentIconsDark::class);
 
 $typeIconMap = [
     'AE' => 'americanExpress',

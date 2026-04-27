@@ -21,10 +21,11 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment;
 
+use Hyva\Checkout\Model\Magewire\Payment\AbstractPlaceOrderService;
 use Magento\Framework\Exception\CouldNotSaveException;
-use Magento\Quote\Api\CartManagementInterface;
+use Magento\Quote\Model\Quote;
 
-class PlaceOrderService extends \Hyva\Checkout\Model\Magewire\Payment\AbstractPlaceOrderService
+class PlaceOrderService extends AbstractPlaceOrderService
 {
     private const ALLOWED_KEYS = [
         'method' => null,
@@ -45,7 +46,7 @@ class PlaceOrderService extends \Hyva\Checkout\Model\Magewire\Payment\AbstractPl
     /**
      * @throws CouldNotSaveException
      */
-    public function placeOrder(\Magento\Quote\Model\Quote $quote): int
+    public function placeOrder(Quote $quote): int
     {
         $paymentData = $this->getData()->getPayment();
 

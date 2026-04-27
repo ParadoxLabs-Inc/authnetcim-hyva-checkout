@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+
 /**
  * Copyright © 2023-present ParadoxLabs, Inc.
  *
@@ -32,11 +33,11 @@ use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
 /** @var ViewModelRegistry $viewModels */
 /** @var PaymentForm $formViewModel */
 
-$code           = $escaper->escapeHtmlAttr($block->getData('method_code'));
-$formViewModel  = $viewModels->require(PaymentForm::class);
-$formBlock      = $formViewModel->getFormBlock($code);
-$method         = $formBlock->getMethod();
-$image          = $formBlock->getBrandingImage();
+$code = $escaper->escapeHtmlAttr($block->getData('method_code'));
+$formViewModel = $viewModels->require(PaymentForm::class);
+$formBlock = $formViewModel->getFormBlock($code);
+$method = $formBlock->getMethod();
+$image = $formBlock->getBrandingImage();
 ?>
 <div class="<?= /* @noEscape */ $code ?>"
      x-data="<?= /* @noEscape */ $code ?>PaymentForm"

@@ -28,11 +28,12 @@ use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magewirephp\Magewire\Component\Form;
-use ParadoxLabs\TokenBase\Block\Form\Cc;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
 use ParadoxLabs\TokenBase\Api\CardRepositoryInterface;
+use ParadoxLabs\TokenBase\Api\Data\CardInterface;
+use ParadoxLabs\TokenBase\Block\Form\Cc;
 use ParadoxLabs\TokenBase\Helper\Data;
 use Rakit\Validation\Validator;
 
@@ -70,61 +71,24 @@ class Authnetcim extends Form implements EvaluationInterface
     ];
 
     /**
-     * @var CheckoutSession
-     */
-    protected $checkoutSession;
-
-    /**
-     * @var \ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest
-     */
-    protected $acceptCustomerService;
-
-    /**
-     * @var AcceptHostedService
-     */
-    protected $acceptHostedService;
-
-    /**
-     * @var \ParadoxLabs\TokenBase\Api\CardRepositoryInterface
-     */
-    protected $cardRepository;
-
-    /**
-     * @var \ParadoxLabs\TokenBase\Helper\Data
-     */
-    protected $helper;
-
-    /**
-     * @var \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm
-     */
-    protected $formViewModel;
-
-    /**
      * @param \Rakit\Validation\Validator $validator
      * @param CheckoutSession $checkoutSession
-     * @param \ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest $acceptCustomerService
+     * @param AcceptCustomerService $acceptCustomerService
      * @param AcceptHostedService $acceptHostedService
-     * @param \ParadoxLabs\TokenBase\Api\CardRepositoryInterface $cardRepository
-     * @param \ParadoxLabs\TokenBase\Helper\Data $helper
-     * @param \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm $formViewModel
+     * @param CardRepositoryInterface $cardRepository
+     * @param Data $helper
+     * @param PaymentForm $formViewModel
      */
     public function __construct(
         Validator $validator,
-        CheckoutSession $checkoutSession,
-        AcceptCustomerService $acceptCustomerService,
-        AcceptHostedService $acceptHostedService,
-        CardRepositoryInterface $cardRepository,
-        Data $helper,
-        PaymentForm $formViewModel
+        protected CheckoutSession $checkoutSession,
+        protected AcceptCustomerService $acceptCustomerService,
+        protected AcceptHostedService $acceptHostedService,
+        protected CardRepositoryInterface $cardRepository,
+        protected Data $helper,
+        protected PaymentForm $formViewModel
     ) {
         parent::__construct($validator);
-
-        $this->checkoutSession = $checkoutSession;
-        $this->acceptHostedService = $acceptHostedService;
-        $this->cardRepository = $cardRepository;
-        $this->helper = $helper;
-        $this->acceptCustomerService = $acceptCustomerService;
-        $this->formViewModel = $formViewModel;
     }
 
     /**
@@ -169,8 +133,8 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * Generate Accept Hosted form token
      *
-     * @see \ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest
      * @return void
+     * @see \ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest
      */
     public function initHostedForm(): void
     {
@@ -204,16 +168,16 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * Determine whether checkout completion is allowed
      *
-     * @param \Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory $factory
+     * @param \Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory $resultFactory
      * @return \Hyva\Checkout\Model\Magewire\Component\EvaluationResultInterface
      */
-    public function evaluateCompletion(EvaluationResultFactory $factory): EvaluationResultInterface
+    public function evaluateCompletion(EvaluationResultFactory $resultFactory): EvaluationResultInterface
     {
-        $validationError = $factory->createErrorMessage();
+        $validationError = $resultFactory->createErrorMessage();
         $validationError->withMessage('There\'s an issue with your payment details. Please check the payment form.');
         $validationError->withVisibilityDuration(5000);
 
-        $validation = $factory->createValidation('validate' . static::METHOD_CODE);
+        $validation = $resultFactory->createValidation('validate' . static::METHOD_CODE);
         $validation->withFailureResult($validationError);
 
         return $validation;
@@ -261,7 +225,7 @@ class Authnetcim extends Form implements EvaluationInterface
         $this->helper->log(static::METHOD_CODE, 'ERROR: User failed to load hosted form communicator');
 
         $this->dispatchErrorMessage(
-            \__(
+            __(
                 'Payment gateway failed to connect. Please reload and try again. '
                 . 'If the problem continues, please seek support.'
             )
@@ -285,7 +249,7 @@ class Authnetcim extends Form implements EvaluationInterface
      * @param \ParadoxLabs\TokenBase\Api\Data\CardInterface $card
      * @return void
      */
-    protected function addStoredCardToList(\ParadoxLabs\TokenBase\Api\Data\CardInterface $card): void
+    protected function addStoredCardToList(CardInterface $card): void
     {
         $card = $card->getTypeInstance();
 

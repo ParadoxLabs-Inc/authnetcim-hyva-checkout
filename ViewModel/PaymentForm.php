@@ -21,10 +21,13 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel;
 
+use Magento\Framework\View\Element\Block\ArgumentInterface;
+use Magento\Framework\View\LayoutInterface;
 use Magento\Payment\Model\MethodInterface;
+use ParadoxLabs\Authnetcim\Helper\Data;
 use ParadoxLabs\TokenBase\Block\Form\Cc;
 
-class PaymentForm implements \Magento\Framework\View\Element\Block\ArgumentInterface
+class PaymentForm implements ArgumentInterface
 {
     /**
      * @var \ParadoxLabs\Authnetcim\Helper\Data
@@ -48,8 +51,8 @@ class PaymentForm implements \Magento\Framework\View\Element\Block\ArgumentInter
      * @param \Magento\Framework\View\LayoutInterface $layout
      */
     public function __construct(
-        \ParadoxLabs\Authnetcim\Helper\Data $helper,
-        \Magento\Framework\View\LayoutInterface $layout
+        Data $helper,
+        LayoutInterface $layout
     ) {
         $this->helper = $helper;
         $this->layout = $layout;

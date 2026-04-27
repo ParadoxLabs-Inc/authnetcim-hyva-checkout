@@ -13,23 +13,15 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\Block;
 
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\View\Element\Template;
+use Magento\Framework\View\Element\Template\Context;
 use ParadoxLabs\Authnetcim\Model\ConfigProvider;
+use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
+use ParadoxLabs\TokenBase\Gateway\Validator\CreditCard\Types;
 
-class CheckoutTemplate extends \Magento\Framework\View\Element\Template
+class CheckoutTemplate extends Template
 {
-    /**
-     * @var \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm
-     */
-    protected $paymentForm;
-    /**
-     * @var \ParadoxLabs\Authnetcim\Model\ConfigProvider
-     */
-    protected $configProvider;
-    /**
-     * @var \ParadoxLabs\TokenBase\Gateway\Validator\CreditCard\Types
-     */
-    protected $ccTypes;
-
     /**
      * Constructor
      *
@@ -39,17 +31,13 @@ class CheckoutTemplate extends \Magento\Framework\View\Element\Template
      * @param array $data
      */
     public function __construct(
-        \Magento\Framework\View\Element\Template\Context $context,
-        \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm $paymentForm,
-        \ParadoxLabs\Authnetcim\Model\ConfigProvider $configProvider,
-        \ParadoxLabs\TokenBase\Gateway\Validator\CreditCard\Types $ccTypes,
+        Context $context,
+        protected PaymentForm $paymentForm,
+        protected ConfigProvider $configProvider,
+        protected Types $ccTypes,
         array $data = []
     ) {
         parent::__construct($context, $data);
-
-        $this->paymentForm = $paymentForm;
-        $this->configProvider = $configProvider;
-        $this->ccTypes = $ccTypes;
     }
 
     /**
@@ -63,10 +51,10 @@ class CheckoutTemplate extends \Magento\Framework\View\Element\Template
         $formType  = (string)($method->getConfigData('form_type') ?: ConfigProvider::FORM_HOSTED);
         $templates = (array)$this->getData('form_template');
 
-        if (isset($templates[$formType])) {
-            $this->_template = $templates[$formType];
+        if (isset($templates[ $formType ])) {
+            $this->_template = $templates[ $formType ];
         } else {
-            throw new \Magento\Framework\Exception\LocalizedException(
+            throw new LocalizedException(
                 __('No compatible template found for the %1 form.', $formType)
             );
         }
@@ -93,7 +81,7 @@ class CheckoutTemplate extends \Magento\Framework\View\Element\Template
     {
         $config = $this->configProvider->getConfig();
 
-        return $config['payment'][$this->getMethodCode()] ?? [];
+        return $config['payment'][ $this->getMethodCode() ] ?? [];
     }
 
     /**
@@ -103,10 +91,10 @@ class CheckoutTemplate extends \Magento\Framework\View\Element\Template
      */
     public function getCcTypes(): array
     {
-        $types = $this->ccTypes->getTypes();
+        $types       = $this->ccTypes->getTypes();
         $typesByCode = [];
         foreach ($types as $type) {
-            $typesByCode[$type['type']] = $type;
+            $typesByCode[ $type['type'] ] = $type;
         }
 
         return $typesByCode;
