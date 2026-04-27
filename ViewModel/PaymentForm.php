@@ -21,6 +21,7 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel;
 
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 use Magento\Framework\View\LayoutInterface;
 use Magento\Payment\Model\MethodInterface;
@@ -30,40 +31,28 @@ use ParadoxLabs\TokenBase\Block\Form\Cc;
 class PaymentForm implements ArgumentInterface
 {
     /**
-     * @var \ParadoxLabs\Authnetcim\Helper\Data
-     */
-    protected $helper;
-
-    /**
-     * @var \Magento\Framework\View\LayoutInterface
-     */
-    protected $layout;
-
-    /**
-     * @var \ParadoxLabs\TokenBase\Block\Form\Cc
+     * @var Cc
      */
     protected $formBlock;
 
     /**
      * PaymentForm constructor.
      *
-     * @param \ParadoxLabs\Authnetcim\Helper\Data $helper
-     * @param \Magento\Framework\View\LayoutInterface $layout
+     * @param Data $helper
+     * @param LayoutInterface $layout
      */
     public function __construct(
-        Data $helper,
-        LayoutInterface $layout
+        protected readonly Data $helper,
+        protected readonly LayoutInterface $layout,
     ) {
-        $this->helper = $helper;
-        $this->layout = $layout;
     }
 
     /**
      * Get the active payment method instance
      *
      * @param string $code
-     * @return \Magento\Payment\Model\MethodInterface
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @return MethodInterface
+     * @throws LocalizedException
      */
     public function getMethod(string $code): MethodInterface
     {
@@ -74,8 +63,8 @@ class PaymentForm implements ArgumentInterface
      * Get the active payment method form block
      *
      * @param string $code
-     * @return \ParadoxLabs\TokenBase\Block\Form\Cc
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @return Cc
+     * @throws LocalizedException
      */
     public function getFormBlock(string $code): Cc
     {

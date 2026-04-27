@@ -25,16 +25,16 @@ class CheckoutTemplate extends Template
     /**
      * Constructor
      *
-     * @param \Magento\Framework\View\Element\Template\Context $context
-     * @param \ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm $paymentForm
-     * @param \ParadoxLabs\Authnetcim\Model\ConfigProvider $configProvider
+     * @param Context $context
+     * @param PaymentForm $paymentForm
+     * @param ConfigProvider $configProvider
      * @param array $data
      */
     public function __construct(
         Context $context,
-        protected PaymentForm $paymentForm,
-        protected ConfigProvider $configProvider,
-        protected Types $ccTypes,
+        protected readonly PaymentForm $paymentForm,
+        protected readonly ConfigProvider $configProvider,
+        protected readonly Types $ccTypes,
         array $data = []
     ) {
         parent::__construct($context, $data);

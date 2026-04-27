@@ -21,6 +21,9 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment;
 
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Exception\NoSuchEntityException;
+use ParadoxLabs\TokenBase\Model\Card;
 use Hyva\Checkout\Model\Magewire\Component\EvaluationInterface;
 use Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory;
 use Hyva\Checkout\Model\Magewire\Component\EvaluationResultInterface;
@@ -81,12 +84,12 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     public function __construct(
         Validator $validator,
-        protected CheckoutSession $checkoutSession,
-        protected AcceptCustomerService $acceptCustomerService,
-        protected AcceptHostedService $acceptHostedService,
-        protected CardRepositoryInterface $cardRepository,
-        protected Data $helper,
-        protected PaymentForm $formViewModel
+        protected readonly CheckoutSession $checkoutSession,
+        protected readonly AcceptCustomerService $acceptCustomerService,
+        protected readonly AcceptHostedService $acceptHostedService,
+        protected readonly CardRepositoryInterface $cardRepository,
+        protected readonly Data $helper,
+        protected readonly PaymentForm $formViewModel
     ) {
         parent::__construct($validator);
     }
@@ -103,7 +106,7 @@ class Authnetcim extends Form implements EvaluationInterface
 
     /**
      * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     public function mount(): void
     {
@@ -114,7 +117,7 @@ class Authnetcim extends Form implements EvaluationInterface
      * Update component selected card based on the quote's assigned stored card
      *
      * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     protected function loadSelectedCard(): void
     {
@@ -156,9 +159,9 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * Get the current user's active quote
      *
-     * @return \Magento\Quote\Api\Data\CartInterface
-     * @throws \Magento\Framework\Exception\LocalizedException
-     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     * @return CartInterface
+     * @throws LocalizedException
+     * @throws NoSuchEntityException
      */
     protected function getQuote(): CartInterface
     {
@@ -186,8 +189,8 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * Get the active payment method instance
      *
-     * @return \Magento\Payment\Model\MethodInterface
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @return MethodInterface
+     * @throws LocalizedException
      */
     protected function getMethod(): MethodInterface
     {
@@ -197,8 +200,8 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * Get the active payment method form block
      *
-     * @return \ParadoxLabs\TokenBase\Block\Form\Cc
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @return Cc
+     * @throws LocalizedException
      */
     protected function getFormBlock(): Cc
     {
@@ -207,11 +210,11 @@ class Authnetcim extends Form implements EvaluationInterface
 
     /**
      * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     protected function loadStoredCards(): void
     {
-        /** @var \ParadoxLabs\TokenBase\Model\Card $card */
+        /** @var Card $card */
         foreach ($this->getFormBlock()->getStoredCards() as $card) {
             $this->addStoredCardToList($card);
         }
@@ -235,7 +238,7 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * @param array $data
      * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws LocalizedException
      */
     public function getNewCard($data = []): void
     {
@@ -246,7 +249,7 @@ class Authnetcim extends Form implements EvaluationInterface
     }
 
     /**
-     * @param \ParadoxLabs\TokenBase\Api\Data\CardInterface $card
+     * @param CardInterface $card
      * @return void
      */
     protected function addStoredCardToList(CardInterface $card): void
