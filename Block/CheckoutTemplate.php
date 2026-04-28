@@ -45,6 +45,7 @@ class CheckoutTemplate extends Template
      *
      * @return string
      */
+    #[\Override]
     public function getTemplate()
     {
         $method    = $this->paymentForm->getMethod($this->getMethodCode());

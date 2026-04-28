@@ -27,7 +27,7 @@ class RegisterHyvaCompatibilityObserver implements ObserverInterface
         $config     = $event->getData('config');
         $extensions = $config->hasData('extensions') ? $config->getData('extensions') : [];
 
-        $moduleName = implode('_', array_slice(explode('\\', __CLASS__), 0, 2));
+        $moduleName = implode('_', array_slice(explode('\\', self::class), 0, 2));
 
         $path = $this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
 
