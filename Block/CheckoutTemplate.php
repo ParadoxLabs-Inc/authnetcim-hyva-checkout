@@ -16,6 +16,7 @@ namespace ParadoxLabs\AuthnetcimHyvaCheckout\Block;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\View\Element\Template;
 use Magento\Framework\View\Element\Template\Context;
+use Override;
 use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
 use ParadoxLabs\TokenBase\Gateway\Validator\CreditCard\Types;
@@ -45,7 +46,7 @@ class CheckoutTemplate extends Template
      *
      * @return string
      */
-    #[\Override]
+    #[Override]
     public function getTemplate()
     {
         $method    = $this->paymentForm->getMethod($this->getMethodCode());
