@@ -65,7 +65,7 @@ class Authnetcim extends Form implements EvaluationInterface
     ];
 
     /* Public component properties */
-    public $storedCards = [];
+    public array $storedCards = [];
 
     /* Protected property validation rule map */
     protected $rules = [
@@ -255,9 +255,10 @@ class Authnetcim extends Form implements EvaluationInterface
     protected function addStoredCardToList(CardInterface $card): void
     {
         $card = $card->getTypeInstance();
+        $hash = (string)$card->getHash();
 
-        $this->storedCards[ $card->getHash() ] = [
-            'hash' => $card->getHash(),
+        $this->storedCards[$hash] = [
+            'hash' => $hash,
             'label' => $card->getLabel(),
             'type' => $card->getType(),
         ];

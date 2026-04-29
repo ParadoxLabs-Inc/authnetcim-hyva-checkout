@@ -92,12 +92,6 @@ class CheckoutTemplate extends Template
      */
     public function getCcTypes(): array
     {
-        $types       = $this->ccTypes->getTypes();
-        $typesByCode = [];
-        foreach ($types as $type) {
-            $typesByCode[ $type['type'] ] = $type;
-        }
-
-        return $typesByCode;
+        return array_column($this->ccTypes->getTypes(), null, 'type');
     }
 }
