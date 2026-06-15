@@ -1,5 +1,12 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 3.0.0 - Jun 17, 2026: PHP 8.1–8.5 compatibility
+
+**WARNING: PHP 8.1 is now the minimum. Now requires ParadoxLabs_Authnetcim 6.0.**
+
+- Added support up to PHP 8.5; PHP 8.1+ is now required.
+- Refactored for PHP 8.1+: constructor property promotion, readonly properties, strict types, and import cleanup (Magewire payment component, view models, blocks).
+
 ## 2.0.1 - May 28, 2025
 
 - Fixed CC autocomplete selecting stored cards.
