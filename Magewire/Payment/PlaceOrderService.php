@@ -62,6 +62,19 @@ class PlaceOrderService extends AbstractPlaceOrderService
      * and imports the Accept Hosted transaction_id, and copies acceptjs_key/acceptjs_value into
      * additional_information.
      *
+     * The addData() that follows importData() is load-bearing, not redundant: Hyva's
+     * AbstractPlaceOrderService passes the quote payment into CartManagement::placeOrder(), and
+     * QuoteManagement::placeOrderRun re-runs importData($payment->getData()). On that second
+     * import the Accept.js keys are no longer top-level, so processAcceptJs is skipped and
+     * TokenBase's assignStandardData hits its `elseif (tokenbase_id === null)` branch and nulls
+     * cc_last_4 — the just-created card and order lose their last4 ("Visa XXXX-"). Re-staging the
+     * allowlisted raw keys as top-level payment data makes the second import re-run the observer
+     * chain with the same inputs. processAcceptJs is idempotent: it only re-stashes the same
+     * acceptjs_key/acceptjs_value/cc_last4 into additional_information and re-nulls tokenbase_id;
+     * it does not consume the Accept.js nonce (that happens later at gateway auth, after the assign
+     * chain), so running it twice with identical inputs yields identical state. processAcceptHosted
+     * is likewise idempotent via its transaction_id-equality early return.
+     *
      * @throws CouldNotSaveException
      * @throws LocalizedException
      */
@@ -82,10 +95,15 @@ class PlaceOrderService extends AbstractPlaceOrderService
             self::ALLOWED_KEYS
         );
 
-        $quote->getPayment()->importData([
+        $payment = $quote->getPayment();
+        $payment->importData([
             PaymentInterface::KEY_METHOD => $methodCode,
             PaymentInterface::KEY_ADDITIONAL_DATA => $knownPaymentData,
         ]);
+
+        // Re-stage the allowed keys as raw payment data so the re-import re-asserts them
+        // through the observer chain instead of wiping cc_last_4 (see docblock).
+        $payment->addData($knownPaymentData);
 
         return parent::placeOrder($quote);
     }
