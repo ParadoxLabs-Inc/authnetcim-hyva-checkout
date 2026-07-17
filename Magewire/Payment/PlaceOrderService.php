@@ -21,15 +21,25 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment;
 
-use Magento\Quote\Model\Quote\Payment;
 use Hyva\Checkout\Model\Magewire\Payment\AbstractPlaceOrderService;
 use Magento\Framework\Exception\CouldNotSaveException;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Quote\Api\Data\PaymentInterface;
 use Magento\Quote\Model\Quote;
+use ParadoxLabs\Authnetcim\Model\Ach\ConfigProvider as AchConfigProvider;
+use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 
 class PlaceOrderService extends AbstractPlaceOrderService
 {
+    /**
+     * Payment method codes this place order service is allowed to submit for
+     */
+    private const ALLOWED_METHODS = [
+        ConfigProvider::CODE,
+        AchConfigProvider::CODE,
+    ];
+
     private const ALLOWED_KEYS = [
-        'method' => null,
         'card_id' => null,
         'save' => null,
         'cc_number' => null,
@@ -45,11 +55,26 @@ class PlaceOrderService extends AbstractPlaceOrderService
     ];
 
     /**
+     * Assign the client payment data to the quote payment, then place the order.
+     *
+     * importData() (not addData()) so the payment_method_assign_data observer chain is guaranteed
+     * to run before order placement — that is what resolves card_id into tokenbase_id, validates
+     * and imports the Accept Hosted transaction_id, and copies acceptjs_key/acceptjs_value into
+     * additional_information.
+     *
      * @throws CouldNotSaveException
+     * @throws LocalizedException
      */
     public function placeOrder(Quote $quote): int
     {
-        $paymentData = $this->getData()->getPayment();
+        // The method code must come from the quote server-side, never from client input.
+        $methodCode = (string)$quote->getPayment()->getMethod();
+
+        if (!in_array($methodCode, self::ALLOWED_METHODS, true)) {
+            throw new LocalizedException(__('Invalid payment method.'));
+        }
+
+        $paymentData = (array)$this->getData()->getPayment();
 
         // Only pass through known allowed values, to prevent parameter injection
         $knownPaymentData = array_intersect_key(
@@ -57,9 +82,10 @@ class PlaceOrderService extends AbstractPlaceOrderService
             self::ALLOWED_KEYS
         );
 
-        /** @var Payment $payment */
-        $payment = $quote->getPayment();
-        $payment->addData($knownPaymentData);
+        $quote->getPayment()->importData([
+            PaymentInterface::KEY_METHOD => $methodCode,
+            PaymentInterface::KEY_ADDITIONAL_DATA => $knownPaymentData,
+        ]);
 
         return parent::placeOrder($quote);
     }

@@ -15,6 +15,7 @@
         <arguments>
             <argument name="placeOrderServiceList" xsi:type="array">
                 <item name="authnetcim" xsi:type="object">ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\PlaceOrderService</item>
+                <item name="authnetcim_ach" xsi:type="object">ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\PlaceOrderService</item>
             </argument>
         </arguments>
     </type>
