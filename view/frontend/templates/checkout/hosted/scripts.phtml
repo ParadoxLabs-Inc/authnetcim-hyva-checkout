@@ -54,6 +54,7 @@ $inlineScript = <<<JS
             showHostedForm: true,
             showTermsNotice: false,
             componentInitialized: false,
+            _hidOrderButton: false,
             processingSave: false,
             timeoutReloader: null,
             timeoutCommunicator: null,
@@ -79,15 +80,32 @@ $inlineScript = <<<JS
                 this.payment.card_id = this.config.selectedCard;
                 this.payment.save = this.config.defaultSaveCard;
 
-                window.addEventListener(
-                    'checkout:validate:{$code}',
-                    this.prepareSubmit.bind(this)
-                );
+                // Store bound refs globally and remove-before-add: if Magewire replaces the root
+                // node, a fresh Alpine instance initializes and a stale listener set would double
+                // (and double-settle) the shared validation promise, double-toggle the order button,
+                // and re-fire loadHostedForm. A fresh .bind() cannot be removed, so the previous
+                // instance's exact handler refs must be kept here to unregister them.
+                const listeners = window['{$code}Listeners'] = window['{$code}Listeners'] || {};
 
-                window.addEventListener('message', this.handleCommunication.bind(this));
-                document.addEventListener('checkout:payment:method-activate', this.toggleOrderButton.bind(this));
-                document.removeEventListener('{$code}InitHostedForm', this.loadHostedForm.bind(this));
-                document.addEventListener('{$code}InitHostedForm', this.loadHostedForm.bind(this));
+                window.removeEventListener('checkout:validate:{$code}', listeners.validate);
+                listeners.validate = this.prepareSubmit.bind(this);
+                window.addEventListener('checkout:validate:{$code}', listeners.validate);
+
+                window.removeEventListener('message', listeners.message);
+                listeners.message = this.handleCommunication.bind(this);
+                window.addEventListener('message', listeners.message);
+
+                // Hyva dispatches method-activate on window (init-payment.phtml); a document
+                // listener never fires.
+                window.removeEventListener('checkout:payment:method-activate', listeners.methodActivate);
+                listeners.methodActivate = this.toggleOrderButton.bind(this);
+                window.addEventListener('checkout:payment:method-activate', listeners.methodActivate);
+
+                // {$code}InitHostedForm bubbles from the Magewire component el up to document.
+                document.removeEventListener('{$code}InitHostedForm', listeners.initHostedForm);
+                listeners.initHostedForm = this.loadHostedForm.bind(this);
+                document.addEventListener('{$code}InitHostedForm', listeners.initHostedForm);
+
                 this.\$watch('selectedCard', this.changeSelectedCard.bind(this));
 
                 if (document.querySelectorAll('[wire\\\\:id=checkout\\\\.terms-conditions]').length) {
@@ -130,14 +148,24 @@ $inlineScript = <<<JS
                 this.\$wire.call('initHostedForm');
             },
             toggleOrderButton: function(event) {
-                let method = event && event.detail
-                             ? event.detail.method
-                             : document.querySelector('input[name="payment-method-option"]:checked').value;
+                const method = event && event.detail
+                    ? event.detail.method
+                    : document.querySelector('input[name="payment-method-option"]:checked')?.value;
 
+                const orderBtn = document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]');
+
+                if (!orderBtn) {
+                    return;
+                }
+
+                // Only ever undo our own hide: every payment component shares this one button, so
+                // unconditional writes from each would clobber one another on method switches.
                 if (method === '{$code}' && this.showHostedForm) {
-                    document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]').style.display = 'none';
-                } else {
-                    document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]').style.display = 'block';
+                    orderBtn.style.display = 'none';
+                    this._hidOrderButton = true;
+                } else if (this._hidOrderButton) {
+                    orderBtn.style.display = '';
+                    this._hidOrderButton = false;
                 }
             },
             loadHostedForm: function(event) {
@@ -187,9 +215,20 @@ $inlineScript = <<<JS
                 }
             },
             checkCommunicator: function() {
+                // Fires ~20s after the iframe posts. Report a failure only when the iframe was
+                // actually loaded yet no postMessage ever arrived. Skip in every state where no
+                // communicator is expected. Truth table (return = skip the failure report):
+                //
+                //   communicatorActive | showHostedForm | showTermsNotice | iframeInitialized | action
+                //   -------------------|----------------|-----------------|-------------------|--------
+                //   true               |      *         |       *         |        *          | skip (it responded)
+                //   false              |    false       |       *         |        *          | skip (stored card, no iframe)
+                //   false              |    true         |     true        |        *          | skip (terms notice up, iframe never inited)
+                //   false              |    true         |     false       |      false        | skip (iframe not inited yet)
+                //   false              |    true         |     false       |      true          | REPORT failure
                 if (this.communicatorActive
                     || !this.showHostedForm
-                    || !this.showTermsNotice
+                    || this.showTermsNotice
                     || this.iframeInitialized === false) {
                     return;
                 }
@@ -307,7 +346,9 @@ $inlineScript = <<<JS
                 const cvv = e.target.value;
                 const valid = (cvv.length === this.state.cc_cid_length);
 
-                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', this.state.cc_type.code.name));
+                // state.cc_type here is a plain type code string (e.g. 'AE'), not an object, so the
+                // CVV label is fixed rather than derived from a non-existent code.name shape.
+                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', 'CVV'));
                 if (!valid) {
                     e.target.reportValidity();
                 }
@@ -315,7 +356,7 @@ $inlineScript = <<<JS
                 return this.setCcCid();
             },
             getCcCid() {return this.payment.cc_cid},
-            getCcCidLabel() {return (this.state.cc_type?.code.name || 'CVV') + ' '},
+            getCcCidLabel() {return 'CVV '},
             getCcCidLength() {return this.state.cc_cid_length},
             getCcCidPlaceholder() {return this.state.cc_cid_length === 4 ? '0000' : '000'},
             hideHostedForm() {return !this.showHostedForm},

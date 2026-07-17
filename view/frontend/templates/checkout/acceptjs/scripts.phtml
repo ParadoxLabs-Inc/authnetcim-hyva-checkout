@@ -99,10 +99,15 @@ $inlineScript = <<<JS
                 this.payment.card_id = this.config.selectedCard;
                 this.payment.save = this.config.defaultSaveCard;
 
-                window.addEventListener(
-                    'checkout:validate:{$code}',
-                    this.validateAndTokenize.bind(this)
-                );
+                // Store bound refs globally and remove-before-add: if Magewire replaces the root
+                // node, a fresh Alpine instance initializes and a stale listener would double the
+                // shared validation promise, tokenizing and placing the order twice. A fresh
+                // .bind() cannot be removed, so the previous instance's exact ref must be kept.
+                const listeners = window['{$code}Listeners'] = window['{$code}Listeners'] || {};
+
+                window.removeEventListener('checkout:validate:{$code}', listeners.validate);
+                listeners.validate = this.validateAndTokenize.bind(this);
+                window.addEventListener('checkout:validate:{$code}', listeners.validate);
 
                 this.initAcceptJs();
 
@@ -308,7 +313,7 @@ $inlineScript = <<<JS
                 const cvv = e.target.value;
                 const valid = (cvv.length === this.state.cc_cid_length);
 
-                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', this.state.cc_type.code.name));
+                e.target.setCustomValidity(valid ? '' : "{$escaper->escapeHtml(__('Please enter a valid %1.'))}".replace('%1', this.state.cc_type?.code?.name || 'CVV'));
                 if (!valid) {
                     e.target.reportValidity();
                 }
@@ -396,7 +401,7 @@ $inlineScript = <<<JS
                 return this.\$el.value = this.payment.cc_exp;
             },
             getCcCid() {return this.payment.cc_cid},
-            getCcCidLabel() {return (this.state.cc_type.code.name || 'CVV') + ' '},
+            getCcCidLabel() {return (this.state.cc_type?.code?.name || 'CVV') + ' '},
             getCcCidLength() {return this.state.cc_cid_length},
             getCcCidPlaceholder() {return this.state.cc_cid_length === 4 ? '0000' : '000'},
             getCcExp() {return this.payment.cc_exp},
