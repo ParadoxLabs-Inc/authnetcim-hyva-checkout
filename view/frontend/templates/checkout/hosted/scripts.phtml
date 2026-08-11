@@ -223,9 +223,9 @@ $inlineScript = <<<JS
                 //   -------------------|----------------|-----------------|-------------------|--------
                 //   true               |      *         |       *         |        *          | skip (it responded)
                 //   false              |    false       |       *         |        *          | skip (stored card, no iframe)
-                //   false              |    true         |     true        |        *          | skip (terms notice up, iframe never inited)
-                //   false              |    true         |     false       |      false        | skip (iframe not inited yet)
-                //   false              |    true         |     false       |      true          | REPORT failure
+                //   false              |    true        |     true        |        *          | skip (terms notice up, iframe never inited)
+                //   false              |    true        |     false       |      false        | skip (iframe not inited yet)
+                //   false              |    true        |     false       |      true         | REPORT failure
                 if (this.communicatorActive
                     || !this.showHostedForm
                     || this.showTermsNotice
