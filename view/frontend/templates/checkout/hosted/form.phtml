@@ -42,7 +42,7 @@ $image = $formBlock->getBrandingImage();
 <div class="<?= /* @noEscape */ $code ?>"
      x-data="<?= /* @noEscape */ $code ?>PaymentForm"
      x-init="initForm"
-     data-config='<?= $escaper->escapeJsQuote(json_encode($block->getConfig())) ?>'
+     data-config="<?= $escaper->escapeHtmlAttr(json_encode($block->getConfig())) ?>"
 >
     <?php if ($image): ?>
         <div class="flex justify-end mb-2">
