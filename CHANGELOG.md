@@ -1,5 +1,13 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 3.1.0 - Jul 17, 2026: Customer payment options on Hyva
+
+**Now requires ParadoxLabs_TokenBaseHyvaCheckout (`paradoxlabs/tokenbase-hyva-checkout`).**
+
+- Added customer account payment options (My Payment Options) support on Hyva themes, for both the
+  credit card (Accept Hosted) and eCheck methods.
+- Restored the My Payment Options account navigation link on Hyva (previously removed as unsupported).
+
 ## 3.0.0 - Jun 17, 2026: PHP 8.1–8.5 compatibility
 
 **WARNING: PHP 8.1 is now the minimum. Now requires ParadoxLabs_Authnetcim 6.0.**

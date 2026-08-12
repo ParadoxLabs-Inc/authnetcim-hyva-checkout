@@ -1,0 +1,316 @@
+<?php declare(strict_types=1);
+
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+use ParadoxLabs\Authnetcim\Model\ConfigProvider;
+
+/**
+ * Accept Hosted payment pane for the Hyva customer payment-options add/edit form.
+ *
+ * Rendered as the 'payment_pane' child of the shared TokenBaseHyvaCheckout form scaffold. When the
+ * scaffold announces the address step is confirmed, this posts the form to the hosted
+ * getProfileParams endpoint, loads the Accept Hosted profile form into the iframe, and listens to
+ * the same-origin communicator for completion. On successfulSave it syncs the new/edited card via
+ * the updateCard endpoint, writes the returned card hash into the scaffold's hidden 'id' field,
+ * and submits the form to the TokenBase save controller (which applies the billing address to the
+ * card and redirects with a message) — same contract as the Luma authnetcimHostedPaymentInfo
+ * widget.
+ *
+ * The account form always uses Accept Hosted, regardless of the checkout form_type setting: the
+ * hosted profile API only needs the standard API credentials, and the alternative would be posting
+ * raw card numbers through the server.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var Hyva\Theme\ViewModel\HyvaCsp $hyvaCsp
+ */
+
+$code = $escaper->escapeHtmlAttr(ConfigProvider::CODE);
+$paneConfig = [
+    'code' => ConfigProvider::CODE,
+    'paramUrl' => $block->getUrl('authnetcim/hosted/getProfileParams', ['method' => ConfigProvider::CODE]),
+    'updateCardUrl' => $block->getUrl('authnetcim/hosted/updateCard', ['method' => ConfigProvider::CODE]),
+];
+
+$tServerError = $escaper->escapeJs(__('A server error occurred. Please try again.'));
+?>
+<fieldset class="mb-4"
+          x-data="<?= /* @noEscape */ $code ?>PaymentinfoPane"
+          data-config="<?= $escaper->escapeHtmlAttr(json_encode($paneConfig)) ?>"
+>
+    <legend class="text-lg font-medium mb-2"><?= $escaper->escapeHtml(__('Payment Information')) ?></legend>
+
+    <div class="relative">
+        <div x-show="loading" x-cloak class="flex justify-center p-4">
+            <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                 aria-label="<?= $escaper->escapeHtmlAttr(__('Loading payment form')) ?>">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135
+                         5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        <iframe src="about:blank"
+                id="<?= /* @noEscape */ $code ?>_paymentinfo_iframe"
+                name="<?= /* @noEscape */ $code ?>_paymentinfo_iframe"
+                class="w-full border-0"
+                title="<?= $escaper->escapeHtmlAttr(__('Payment form')) ?>"></iframe>
+    </div>
+</fieldset>
+
+<script>
+    'use strict';
+
+    (function () {
+        if (window.<?= /* @noEscape */ $code ?>PaymentinfoPaneRegistered) {
+            return;
+        }
+
+        window.<?= /* @noEscape */ $code ?>PaymentinfoPaneRegistered = true;
+
+        // Accept Hosted form tokens expire after 15 minutes; reload before entry goes stale.
+        const FORM_LIFETIME_MS = 15 * 60 * 1000;
+
+        window.addEventListener('alpine:init', () => {
+            Alpine.data('<?= /* @noEscape */ $code ?>PaymentinfoPane', () => ({
+                config: {},
+                loading: false,
+                processingSave: false,
+                _inFlight: false,
+                _reloadTimer: null,
+
+                init() {
+                    this.config = JSON.parse(this.$el.dataset.config);
+
+                    window.addEventListener(
+                        this.config.code + 'PaymentinfoAddressConfirmed',
+                        this.handleAddressConfirmed.bind(this)
+                    );
+                    window.addEventListener(
+                        this.config.code + 'PaymentinfoAddressEdit',
+                        this.handleAddressEdit.bind(this)
+                    );
+                    window.addEventListener('message', this.handleCommunication.bind(this), true);
+                },
+
+                getForm() {
+                    return this.$el.closest('form');
+                },
+
+                getIframe() {
+                    return document.getElementById('<?= /* @noEscape */ $code ?>_paymentinfo_iframe');
+                },
+
+                iframeIsVisible() {
+                    const iframe = this.getIframe();
+
+                    return !!iframe && iframe.offsetParent !== null;
+                },
+
+                handleAddressConfirmed() {
+                    // Luma parity: every deliberate entry into the payment step fetches fresh
+                    // hosted form params (the form token is short-lived).
+                    this.initHostedForm();
+                },
+
+                handleAddressEdit() {
+                    this.clearReloadTimer();
+                },
+
+                /**
+                 * Clear and (re)load the hosted payment form: post the serialized account form
+                 * (billing fields + form_key + method + source + card ids) to getProfileParams.
+                 */
+                initHostedForm() {
+                    if (this._inFlight) {
+                        return;
+                    }
+
+                    this.clearReloadTimer();
+
+                    this.loading = true;
+                    this._inFlight = true;
+                    this.processingSave = false;
+                    this.getIframe().src = 'about:blank';
+
+                    const body = new URLSearchParams(new FormData(this.getForm()));
+
+                    fetch(this.config.paramUrl, {
+                        method: 'POST',
+                        headers: {'X-Requested-With': 'XMLHttpRequest'},
+                        body: body,
+                    })
+                    .then(response => response.json().then(data => {
+                        if (!response.ok) {
+                            throw new Error(data && data.message ? data.message : 'Server error');
+                        }
+
+                        return data;
+                    }))
+                    .then(data => this.loadHostedForm(data))
+                    .catch(error => {
+                        this.loading = false;
+                        this._inFlight = false;
+
+                        this.showError(error && error.message ? error.message : null);
+                    });
+                },
+
+                /**
+                 * Post the received params to the iframe to load the Accept Hosted form.
+                 */
+                loadHostedForm(data) {
+                    const iframe = this.getIframe();
+                    const form = document.createElement('form');
+                    form.target = iframe.name;
+                    form.method = 'post';
+                    form.action = data.iframeAction;
+
+                    for (const key in data.iframeParams) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = data.iframeParams[key];
+                        form.appendChild(input);
+                    }
+
+                    this.$el.appendChild(form);
+                    form.submit();
+                    form.remove();
+
+                    // Reload after the 15-minute form expiration, if still showing.
+                    this._reloadTimer = setTimeout(this.reloadExpiredForm.bind(this), FORM_LIFETIME_MS);
+
+                    // There's an awkward break between 400-750px; set max width to avoid scrolling.
+                    if (iframe.scrollWidth > 400 && iframe.scrollWidth < 750) {
+                        iframe.style.maxWidth = '400px';
+                    }
+                    iframe.style.minWidth = '300px';
+                    iframe.style.height = '400px';
+
+                    this.loading = false;
+                    this._inFlight = false;
+                },
+
+                reloadExpiredForm() {
+                    if (this.iframeIsVisible()) {
+                        this.initHostedForm();
+                    }
+                },
+
+                /**
+                 * Validate and process a message from the payment form communicator.
+                 */
+                handleCommunication(event) {
+                    if (!event.data || !event.data.action || this.iframeIsVisible() === false) {
+                        return;
+                    }
+
+                    if (event.origin !== window.location.origin) {
+                        console.error('Ignored untrusted message from ' + event.origin);
+
+                        return;
+                    }
+
+                    switch (event.data.action) {
+                        case 'cancel':
+                            // Reload the page to reset the form and address (Luma parity).
+                            window.location.assign(window.location.href);
+                            break;
+                        case 'successfulSave':
+                            this.handleSave();
+                            break;
+                        case 'resizeWindow':
+                            this.getIframe().style.height = Math.ceil(parseFloat(event.data.height)) + 'px';
+                            break;
+                    }
+                },
+
+                /**
+                 * Sync the new/edited card from the gateway, then submit the form to the
+                 * TokenBase save controller to store the billing address against it.
+                 */
+                handleSave() {
+                    if (this.processingSave) {
+                        return;
+                    }
+
+                    this.processingSave = true;
+                    this.loading = true;
+
+                    const form = this.getForm();
+                    const body = new URLSearchParams(new FormData(form));
+
+                    fetch(this.config.updateCardUrl, {
+                        method: 'POST',
+                        headers: {'X-Requested-With': 'XMLHttpRequest'},
+                        body: body,
+                    })
+                    .then(response => response.json().then(data => {
+                        if (!response.ok) {
+                            throw new Error(data && data.message ? data.message : 'Server error');
+                        }
+
+                        return data;
+                    }))
+                    .then(data => {
+                        this.clearReloadTimer();
+
+                        // The scaffold's hidden 'id' field carries the card hash to the TokenBase
+                        // save controller; fill it so the synced card is updated, not duplicated.
+                        form.querySelector('input[name="id"]').value = data.card.id;
+
+                        form.submit();
+                    })
+                    .catch(error => {
+                        this.processingSave = false;
+                        this.loading = false;
+
+                        this.showError(error && error.message ? error.message : null);
+                    });
+                },
+
+                clearReloadTimer() {
+                    if (this._reloadTimer) {
+                        clearTimeout(this._reloadTimer);
+                        this._reloadTimer = null;
+                    }
+                },
+
+                showError(message) {
+                    if (typeof window.dispatchMessages === 'function') {
+                        window.dispatchMessages(
+                            [{type: 'error', text: message || '<?= /* @noEscape */ $tServerError ?>'}],
+                            5000
+                        );
+                    } else {
+                        window.alert(message || '<?= /* @noEscape */ $tServerError ?>');
+                    }
+                },
+            }));
+        }, {once: true});
+    })();
+</script>
+<?php if (isset($hyvaCsp)): ?>
+    <?php $hyvaCsp->registerInlineScript() ?>
+<?php endif; ?>

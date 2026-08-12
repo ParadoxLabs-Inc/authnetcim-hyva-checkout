@@ -1,0 +1,137 @@
+<?php declare(strict_types=1);
+
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Magento\Framework\Escaper;
+use ParadoxLabs\Authnetcim\Model\Ach\ConfigProvider;
+use ParadoxLabs\TokenBase\Block\Customer\Form;
+
+/**
+ * eCheck payment pane for the Hyva customer payment-options add/edit form.
+ *
+ * Rendered as the 'payment_pane' child of the shared TokenBaseHyvaCheckout form scaffold. Plain
+ * bank-account fields with native validation, posted straight to the TokenBase save controller
+ * (which tokenizes server-side) — same field names and contract as the Luma
+ * ParadoxLabs_TokenBase::customer/form/ach.phtml template. The scaffold renders no submit control,
+ * so the pane owns the Save button.
+ *
+ * @var Form $block
+ * @var Escaper $escaper
+ */
+
+$code = $escaper->escapeHtmlAttr(ConfigProvider::CODE);
+$card = $block->getCard();
+$inputClasses = 'form-input block w-full';
+?>
+<fieldset class="mb-4">
+    <legend class="text-lg font-medium mb-2"><?= $escaper->escapeHtml(__('Bank Information')) ?></legend>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="field required">
+            <label class="label text-sm text-gray-700" for="<?= /* @noEscape */ $code ?>-echeck-account-name">
+                <?= $escaper->escapeHtml(__('Name on Account')) ?>
+            </label>
+            <input type="text"
+                   id="<?= /* @noEscape */ $code ?>-echeck-account-name"
+                   name="payment[echeck_account_name]"
+                   value="<?= $escaper->escapeHtmlAttr((string)$card->getAdditional('echeck_account_name')) ?>"
+                   class="<?= /* @noEscape */ $inputClasses ?>"
+                   maxlength="22"
+                   required/>
+        </div>
+        <div class="field required">
+            <label class="label text-sm text-gray-700" for="<?= /* @noEscape */ $code ?>-echeck-bank-name">
+                <?= $escaper->escapeHtml(__('Bank Name')) ?>
+            </label>
+            <input type="text"
+                   id="<?= /* @noEscape */ $code ?>-echeck-bank-name"
+                   name="payment[echeck_bank_name]"
+                   value="<?= $escaper->escapeHtmlAttr((string)$card->getAdditional('echeck_bank_name')) ?>"
+                   class="<?= /* @noEscape */ $inputClasses ?>"
+                   maxlength="50"
+                   autocomplete="off"
+                   required/>
+        </div>
+        <div class="field required">
+            <label class="label text-sm text-gray-700" for="<?= /* @noEscape */ $code ?>-echeck-routing-number">
+                <?= $escaper->escapeHtml(__('Routing Number')) ?>
+            </label>
+            <input type="text"
+                   id="<?= /* @noEscape */ $code ?>-echeck-routing-number"
+                   name="payment[echeck_routing_no]"
+                   value="<?= $card->getId() && $card->getAdditional('echeck_routing_number_last4')
+                       ? 'XXXX' . $escaper->escapeHtmlAttr((string)$card->getAdditional('echeck_routing_number_last4'))
+                       : '' ?>"
+                   class="<?= /* @noEscape */ $inputClasses ?>"
+                   inputmode="numeric"
+                   maxlength="9"
+                   autocomplete="off"
+                   required/>
+        </div>
+        <div class="field required">
+            <label class="label text-sm text-gray-700" for="<?= /* @noEscape */ $code ?>-echeck-account-number">
+                <?= $escaper->escapeHtml(__('Account Number')) ?>
+            </label>
+            <input type="text"
+                   id="<?= /* @noEscape */ $code ?>-echeck-account-number"
+                   name="payment[echeck_account_no]"
+                   value="<?= $card->getId() && $card->getAdditional('echeck_account_number_last4')
+                       ? 'XXXX' . $escaper->escapeHtmlAttr((string)$card->getAdditional('echeck_account_number_last4'))
+                       : '' ?>"
+                   class="<?= /* @noEscape */ $inputClasses ?>"
+                   inputmode="numeric"
+                   maxlength="17"
+                   autocomplete="off"
+                   required/>
+        </div>
+    </div>
+
+    <p class="text-sm text-gray-700 mt-2">
+        <?= $escaper->escapeHtml(__(
+            'On the bottom of your checks, you will see three groups of numbers. Usually the first one is your'
+            . ' routing number, and the second is your account number.'
+        )) ?>
+    </p>
+
+    <div class="field required mt-4">
+        <span class="label text-sm text-gray-700"><?= $escaper->escapeHtml(__('Account Type')) ?></span>
+        <?php $typeValue = $card->getAdditional('echeck_account_type') ?: 'checking'; ?>
+        <?php foreach ($block->getHelper()->getAchAccountTypes() as $key => $label): ?>
+            <div class="flex items-center gap-2">
+                <input type="radio"
+                       name="payment[echeck_account_type]"
+                       id="<?= /* @noEscape */ $code ?>-echeck-account-type-<?= $escaper->escapeHtmlAttr($key) ?>"
+                       value="<?= $escaper->escapeHtmlAttr($key) ?>"
+                       <?php if ($key === $typeValue): ?>checked<?php endif; ?>
+                       required/>
+                <label for="<?= /* @noEscape */ $code ?>-echeck-account-type-<?= $escaper->escapeHtmlAttr($key) ?>">
+                    <?= $escaper->escapeHtml($label) ?>
+                </label>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</fieldset>
+
+<div class="mt-4">
+    <button type="submit" class="btn btn-primary">
+        <?= $escaper->escapeHtml(__('Save')) ?>
+    </button>
+</div>

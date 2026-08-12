@@ -11,6 +11,15 @@
         </arguments>
     </type>
 
+    <type name="ParadoxLabs\TokenBaseHyvaCheckout\ViewModel\SupportedMethods">
+        <arguments>
+            <argument name="methods" xsi:type="array">
+                <item name="authnetcim" xsi:type="string">authnetcim</item>
+                <item name="authnetcim_ach" xsi:type="string">authnetcim_ach</item>
+            </argument>
+        </arguments>
+    </type>
+
     <type name="Hyva\Checkout\Model\Magewire\Payment\PlaceOrderServiceProvider">
         <arguments>
             <argument name="placeOrderServiceList" xsi:type="array">
