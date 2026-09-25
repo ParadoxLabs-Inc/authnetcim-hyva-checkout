@@ -87,6 +87,64 @@ $inlineScript = <<<JS
 
         getClients();
 
+        /**
+         * Get the selected payment method: the Hyva method list component state, else the checked radio.
+         */
+        function getSelectedMethod() {
+            try {
+                const method = Magewire.find('checkout.payment.methods').get('method');
+
+                if (method) {
+                    return method;
+                }
+            } catch (error) {
+                // Method list not on this step (or Magewire not ready); fall back to the DOM.
+            }
+
+            const input = document.querySelector('input[name="payment-method-option"]:checked');
+
+            return input ? input.value : null;
+        }
+
+        /**
+         * Hide Hyva's Place Order button while the wallet method is selected (the wallet button replaces it).
+         *
+         * Done with a class on <html> plus a stylesheet rule, not an inline style on the button: the button lives in
+         * the Magewire main/navigation markup, and every re-render (e.g. the place-order round trip after a failed
+         * wallet payment) morphs it back to the server HTML and drops any inline style. <html> is never morphed.
+         */
+        function syncOrderButton(method) {
+            if (typeof method !== 'string') {
+                method = getSelectedMethod();
+            }
+
+            document.documentElement.classList.toggle('{$code}-selected', method === '{$code}');
+        }
+
+        /**
+         * Re-sync after every Magewire round trip (method list/main re-renders), once per page.
+         */
+        function hookMagewire() {
+            if (listeners.orderButtonHooked
+                || typeof window.Magewire === 'undefined'
+                || typeof window.Magewire.hook !== 'function') {
+                return;
+            }
+
+            listeners.orderButtonHooked = true;
+            window.Magewire.hook('message.processed', () => syncOrderButton());
+        }
+
+        // Page-level (not per Alpine instance), so the button is restored even after the wallet form is removed.
+        window.addEventListener(
+            'checkout:payment:method-activate',
+            event => syncOrderButton(event && event.detail ? event.detail.method : undefined)
+        );
+        window.addEventListener('order:place:error', () => syncOrderButton());
+        window.addEventListener('order:place:{$code}:error', () => syncOrderButton());
+        window.addEventListener('magewire:available', hookMagewire);
+        hookMagewire();
+
         window.addEventListener('checkout:init:validation', event => {
             hyvaCheckout.evaluation.registerValidator(
                 'validate{$code}',
@@ -117,7 +175,6 @@ $inlineScript = <<<JS
                 pending: null,
                 pendingTimer: null,
                 componentInitialized: false,
-                _hidOrderButton: false,
                 initForm: function() {
                     if (this.componentInitialized) {
                         return;
@@ -137,11 +194,6 @@ $inlineScript = <<<JS
                     listeners.orderSuccess = this.handleOrderSuccess.bind(this);
                     window.addEventListener('order:place:success', listeners.orderSuccess);
 
-                    // Hyva dispatches method-activate on window (init-payment.phtml).
-                    window.removeEventListener('checkout:payment:method-activate', listeners.methodActivate);
-                    listeners.methodActivate = this.toggleOrderButton.bind(this);
-                    window.addEventListener('checkout:payment:method-activate', listeners.methodActivate);
-
                     listeners.terms = this.evaluateTerms.bind(this);
 
                     if (document.querySelectorAll('[wire\\\\:id=checkout\\\\.terms-conditions]').length) {
@@ -158,7 +210,8 @@ $inlineScript = <<<JS
                         }
                     }
 
-                    this.toggleOrderButton();
+                    hookMagewire();
+                    syncOrderButton();
 
                     getClients().then(this.renderButtons.bind(this));
 
@@ -380,26 +433,6 @@ $inlineScript = <<<JS
                         // Storage unavailable; nothing was persisted.
                     }
                 },
-                toggleOrderButton: function(event) {
-                    const method = event && event.detail
-                        ? event.detail.method
-                        : document.querySelector('input[name="payment-method-option"]:checked')?.value;
-
-                    const orderBtn = document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]');
-
-                    if (!orderBtn) {
-                        return;
-                    }
-
-                    // Only ever undo our own hide: every payment component shares this one button.
-                    if (method === '{$code}') {
-                        orderBtn.style.display = 'none';
-                        this._hidOrderButton = true;
-                    } else if (this._hidOrderButton) {
-                        orderBtn.style.display = '';
-                        this._hidOrderButton = false;
-                    }
-                },
                 evaluateTerms: function() {
                     try {
                         const terms = Magewire.find('checkout.terms-conditions').get('termAcceptance');
@@ -438,6 +471,10 @@ JS;
 <?php $inlineStyle = <<<CSS
     html:not(.{$code}-available) #payment-method-option-{$code}.inactive {
         display: none;
+    }
+
+    html.{$code}-selected .btn-primary[x-bind~="buttonPlaceOrder"] {
+        display: none !important;
     }
 
     .authnetcim-wallet-buttons {
