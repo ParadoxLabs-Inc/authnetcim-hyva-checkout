@@ -1,5 +1,12 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 3.2.0 - Sep 25, 2026: Apple Pay and Google Pay
+
+**Now requires ParadoxLabs_Authnetcim 6.2.**
+
+- Added Apple Pay and Google Pay (`authnetcim_wallet`) support on Hyva Checkout. The payment method only shows
+  when a wallet is usable in the customer's browser; the order is placed from the wallet payment sheet.
+
 ## 3.1.0 - Jul 17, 2026: Customer payment options on Hyva
 
 **Now requires ParadoxLabs_TokenBaseHyvaCheckout (`paradoxlabs/tokenbase-hyva-checkout`).**

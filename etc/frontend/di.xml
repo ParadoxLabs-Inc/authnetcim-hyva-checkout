@@ -10,6 +10,11 @@
             <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
         </arguments>
     </type>
+    <type name="ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimWallet">
+        <arguments>
+            <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
 
     <type name="ParadoxLabs\TokenBaseHyvaCheckout\ViewModel\SupportedMethods">
         <arguments>
@@ -25,6 +30,7 @@
             <argument name="placeOrderServiceList" xsi:type="array">
                 <item name="authnetcim" xsi:type="object">ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\PlaceOrderService</item>
                 <item name="authnetcim_ach" xsi:type="object">ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\PlaceOrderService</item>
+                <item name="authnetcim_wallet" xsi:type="object">ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\WalletPlaceOrderService</item>
             </argument>
         </arguments>
     </type>

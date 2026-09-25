@@ -23,6 +23,8 @@ Features
   ![2023-12-01_152853](https://github.com/ParadoxLabs-Inc/authnetcim-hyva-checkout/assets/13335952/c55eeb44-a24a-4a35-b946-b783d4a77033)
 * Supports payment by credit card, ACH, and stored cards (via CIM tokenization). See Authorize.net extension for full
   details.
+* Supports Apple Pay and Google Pay (Authorize.net CIM 6.2+). The wallet button replaces the Place Order button, and
+  the method only shows when a wallet is usable in the customer's browser.
 
 Limitations
 ===========

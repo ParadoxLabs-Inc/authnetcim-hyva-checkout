@@ -1,0 +1,473 @@
+<?php declare(strict_types=1);
+
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+use Magento\Framework\View\Helper\SecureHtmlRenderer;
+use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\WalletConfig;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
+/** @var Hyva\Theme\ViewModel\HyvaCsp $hyvaCsp */
+
+$walletConfig = $viewModels->require(WalletConfig::class);
+
+// Nothing at all (no client script, no SDK loads) unless a wallet is enabled and fully configured.
+if (!$walletConfig->isEnabled()) {
+    return;
+}
+
+$code = $escaper->escapeJs($walletConfig->getMethodCode());
+$configJson = json_encode(
+    $walletConfig->getConfig(),
+    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
+) ?: '{}';
+
+$tFailed      = $escaper->escapeJs(
+    __('Your wallet payment could not be completed. Please try again or choose another payment method.')
+);
+$tNoAmount    = $escaper->escapeJs(__('Unable to determine the order total. Please reload and try again.'));
+$tUseButton   = $escaper->escapeJs(__('Please complete your payment with the Apple Pay or Google Pay button.'));
+?>
+<script src="<?= $escaper->escapeUrl($block->getViewFileUrl(WalletConfig::CLIENT_SCRIPT)) ?>"></script>
+<?php
+$inlineScript = <<<JS
+    (() => {
+        'use strict';
+
+        const config = {$configJson};
+        const listeners = window['{$code}Listeners'] = window['{$code}Listeners'] || {};
+        let clientsPromise = null;
+
+        /**
+         * Detect the wallets usable in this browser, once per page (also preloads the wallet SDKs). The payment
+         * method option stays hidden (unless already selected) until a usable wallet is found.
+         */
+        function getClients() {
+            if (clientsPromise === null) {
+                if (typeof window.AuthnetcimWalletClient === 'undefined') {
+                    clientsPromise = Promise.resolve([]);
+                } else {
+                    clientsPromise = window.AuthnetcimWalletClient.getAvailableClients(
+                        config,
+                        {
+                            formKey: typeof hyva !== 'undefined' && hyva.getFormKey ? hyva.getFormKey() : ''
+                        }
+                    ).catch(() => []);
+                }
+
+                clientsPromise.then(clients => {
+                    document.documentElement.classList.toggle('{$code}-available', clients.length > 0);
+                });
+            }
+
+            return clientsPromise;
+        }
+
+        getClients();
+
+        window.addEventListener('checkout:init:validation', event => {
+            hyvaCheckout.evaluation.registerValidator(
+                'validate{$code}',
+                async (element, component) => {
+                    return new Promise((resolve, reject) => {
+                        window.dispatchEvent(
+                            new CustomEvent('checkout:validate:{$code}', {detail: {resolve, reject}})
+                        );
+                    });
+                }
+            );
+        });
+
+        function {$code}PaymentForm() {
+            // -------------------------------------------------------------------------------------------------
+            // Flow: wallet button click -> terms check -> client.pay() (synchronous, opens the sheet)
+            //   -> sheet authorized -> placeWalletOrder(walletData) -> hyvaCheckout.order.place()
+            //   -> validator puts walletData into the place-order payment payload
+            //   -> order:place:success / order:place:{$code}:error settles the sheet (success/failure).
+            // A wallet token is single-use: it is dropped after every attempt and never resubmitted.
+            // -------------------------------------------------------------------------------------------------
+            return {
+                amount: this.\$wire.entangle('amount'),
+                status: 'loading',
+                processing: false,
+                showTermsNotice: false,
+                walletData: null,
+                pending: null,
+                pendingTimer: null,
+                componentInitialized: false,
+                _hidOrderButton: false,
+                initForm: function() {
+                    if (this.componentInitialized) {
+                        return;
+                    }
+
+                    // Store bound refs globally and remove-before-add: if Magewire replaces the root node, a fresh
+                    // Alpine instance initializes, and stale listeners would settle the wrong instance's state.
+                    window.removeEventListener('checkout:validate:{$code}', listeners.validate);
+                    listeners.validate = this.prepareSubmit.bind(this);
+                    window.addEventListener('checkout:validate:{$code}', listeners.validate);
+
+                    window.removeEventListener('order:place:{$code}:error', listeners.orderError);
+                    listeners.orderError = this.handleOrderError.bind(this);
+                    window.addEventListener('order:place:{$code}:error', listeners.orderError);
+
+                    window.removeEventListener('order:place:success', listeners.orderSuccess);
+                    listeners.orderSuccess = this.handleOrderSuccess.bind(this);
+                    window.addEventListener('order:place:success', listeners.orderSuccess);
+
+                    // Hyva dispatches method-activate on window (init-payment.phtml).
+                    window.removeEventListener('checkout:payment:method-activate', listeners.methodActivate);
+                    listeners.methodActivate = this.toggleOrderButton.bind(this);
+                    window.addEventListener('checkout:payment:method-activate', listeners.methodActivate);
+
+                    listeners.terms = this.evaluateTerms.bind(this);
+
+                    if (document.querySelectorAll('[wire\\\\:id=checkout\\\\.terms-conditions]').length) {
+                        this.evaluateTerms();
+
+                        if (!listeners.termsHooked) {
+                            listeners.termsHooked = true;
+
+                            Magewire.hook('message.processed', (message, component) => {
+                                if (component.id === 'checkout.terms-conditions' && listeners.terms) {
+                                    listeners.terms();
+                                }
+                            });
+                        }
+                    }
+
+                    this.toggleOrderButton();
+
+                    getClients().then(this.renderButtons.bind(this));
+
+                    this.componentInitialized = true;
+                },
+                /**
+                 * Render a button for each usable wallet. Client objects are kept out of Alpine state on purpose:
+                 * reactive proxies break the wallet SDK objects.
+                 */
+                renderButtons: function(clients) {
+                    const container = this.\$refs.buttons;
+
+                    if (!container || container.isConnected === false) {
+                        return;
+                    }
+
+                    // Always redraw: buttons left from a previous Alpine instance are bound to that instance.
+                    container.replaceChildren();
+
+                    clients.forEach(client => {
+                        const wrapper = document.createElement('div');
+
+                        wrapper.className = 'authnetcim-wallet-button authnetcim-wallet-button-' + client.type;
+                        container.appendChild(wrapper);
+
+                        try {
+                            client.renderButton(wrapper, this.onWalletClick.bind(this, client));
+                        } catch (error) {
+                            console.error(error);
+                            wrapper.remove();
+                        }
+                    });
+
+                    this.status = container.childElementCount > 0 ? 'ready' : 'unavailable';
+                },
+                /**
+                 * Wallet button click. Everything up to client.pay() must stay synchronous: the wallet sheet needs
+                 * the click gesture. Address/shipping validation runs in hyvaCheckout.order.place() from the sheet.
+                 */
+                onWalletClick: function(client, event) {
+                    if (event && typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                    }
+
+                    if (this.processing) {
+                        return;
+                    }
+
+                    this.evaluateTerms();
+
+                    if (this.showTermsNotice) {
+                        return;
+                    }
+
+                    const amount = parseFloat(this.amount);
+
+                    if (!(amount > 0)) {
+                        hyvaCheckout.message.alert('{$tNoAmount}');
+                        return;
+                    }
+
+                    this.processing = true;
+                    this.walletData = null;
+
+                    let payment;
+
+                    try {
+                        payment = client.pay({amount: amount}, this.placeWalletOrder.bind(this));
+                    } catch (error) {
+                        payment = Promise.reject(error);
+                    }
+
+                    payment.then(this.afterPayment.bind(this), this.handleError.bind(this));
+                },
+                /**
+                 * Place the order with the wallet token, from inside the wallet sheet. Resolves or rejects on the
+                 * place-order outcome, so the wallet can complete its sheet with the matching status.
+                 */
+                placeWalletOrder: function(walletData) {
+                    return new Promise((resolve, reject) => {
+                        this.settle(false, this.handledError(''));
+
+                        this.walletData = {
+                            wallet_type: String(walletData.wallet_type || ''),
+                            wallet_token: String(walletData.wallet_token || ''),
+                            card_display: String(walletData.card_display || '')
+                        };
+                        this.pending = {resolve: resolve, reject: reject};
+
+                        hyvaCheckout.order.place()
+                            .then(result => {
+                                if (this.pending === null) {
+                                    return;
+                                }
+
+                                if (result === false) {
+                                    // Checkout validation (or the request) failed; Hyva already shows why.
+                                    this.settle(false, this.handledError(''));
+                                    return;
+                                }
+
+                                // The outcome event is dispatched while the place-order response is processed,
+                                // before place() settles. Allow a moment in case it is still queued; no outcome at
+                                // all is treated as a failure, since a placed order always reports success.
+                                this.pendingTimer = window.setTimeout(
+                                    () => this.settle(false, new Error('{$tFailed}')),
+                                    2000
+                                );
+                            })
+                            .catch(error => this.settle(false, error));
+                    });
+                },
+                /**
+                 * Hyva evaluation validator: hand the wallet data to place-order. Only valid while a wallet sheet
+                 * is placing the order; the Hyva place order button alone cannot pay with a wallet.
+                 */
+                prepareSubmit: function(event) {
+                    const detail = event && event.detail ? event.detail : {};
+
+                    if (!this.walletData || !this.pending || !this.walletData.wallet_token) {
+                        if (detail.reject) {
+                            detail.reject('{$tUseButton}');
+                        }
+
+                        return;
+                    }
+
+                    // setValue is async and can reject (storage unavailable/full); never resolve the validator
+                    // until the payload is actually stored.
+                    hyvaCheckout.storage.setValue(
+                        'payment',
+                        {
+                            method: '{$code}',
+                            wallet_type: this.walletData.wallet_type,
+                            wallet_token: this.walletData.wallet_token,
+                            card_display: this.walletData.card_display
+                        }
+                    ).then(() => {
+                        if (detail.resolve) {
+                            detail.resolve(true);
+                        }
+                    }).catch(error => {
+                        console.error(error);
+
+                        if (detail.reject) {
+                            detail.reject(error);
+                        }
+                    });
+                },
+                handleOrderSuccess: function() {
+                    this.settle(true, null);
+                },
+                handleOrderError: function(event) {
+                    // The server message is already shown through the place-order evaluation result.
+                    this.settle(
+                        false,
+                        this.handledError(event && event.detail && event.detail.text ? event.detail.text : '')
+                    );
+                },
+                /**
+                 * Settle the pending place-order attempt once, and drop its (spent) wallet token.
+                 */
+                settle: function(success, error) {
+                    window.clearTimeout(this.pendingTimer);
+                    this.pendingTimer = null;
+
+                    const pending = this.pending;
+
+                    this.pending = null;
+                    this.walletData = null;
+                    this.scrubPayment();
+
+                    if (!pending) {
+                        return;
+                    }
+
+                    if (success) {
+                        pending.resolve(true);
+                    } else {
+                        pending.reject(error);
+                    }
+                },
+                afterPayment: function() {
+                    // Order placed; Hyva redirects to the success page. Keep the buttons locked until then.
+                },
+                handleError: function(error) {
+                    this.processing = false;
+                    this.walletData = null;
+                    this.scrubPayment();
+
+                    if (error && (error.canceled || error.handled || error.name === 'CanceledError')) {
+                        return;
+                    }
+
+                    console.error(error);
+
+                    hyvaCheckout.message.alert(
+                        error instanceof Error && error.message ? error.message : '{$tFailed}'
+                    );
+                },
+                handledError: function(message) {
+                    const error = new Error(message || '');
+
+                    error.handled = true;
+
+                    return error;
+                },
+                /**
+                 * Remove the wallet token from the persisted (sessionStorage) place-order payload.
+                 */
+                scrubPayment: function() {
+                    try {
+                        const payload = hyvaCheckout.storage.getValue('payment');
+
+                        if (payload && typeof payload === 'object' && payload.wallet_token) {
+                            hyvaCheckout.storage.setValue('payment', {method: '{$code}'}).catch(() => {});
+                        }
+                    } catch (error) {
+                        // Storage unavailable; nothing was persisted.
+                    }
+                },
+                toggleOrderButton: function(event) {
+                    const method = event && event.detail
+                        ? event.detail.method
+                        : document.querySelector('input[name="payment-method-option"]:checked')?.value;
+
+                    const orderBtn = document.querySelector('.btn-primary[x-bind~="buttonPlaceOrder"]');
+
+                    if (!orderBtn) {
+                        return;
+                    }
+
+                    // Only ever undo our own hide: every payment component shares this one button.
+                    if (method === '{$code}') {
+                        orderBtn.style.display = 'none';
+                        this._hidOrderButton = true;
+                    } else if (this._hidOrderButton) {
+                        orderBtn.style.display = '';
+                        this._hidOrderButton = false;
+                    }
+                },
+                evaluateTerms: function() {
+                    try {
+                        const terms = Magewire.find('checkout.terms-conditions').get('termAcceptance');
+
+                        for (let i in terms) {
+                            if (terms[i] === false) {
+                                this.showTermsNotice = true;
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        // No-op -- catch errors in case the component doesn't exist (yet)
+                    }
+
+                    this.showTermsNotice = false;
+                },
+                /* Getters for template bindings */
+                isLoading() {return this.status === 'loading'},
+                isUnavailable() {return this.status === 'unavailable'},
+                showButtons() {return this.status === 'ready' && !this.showTermsNotice},
+                getButtonsClass() {return this.processing ? 'disabled' : ''},
+            }
+        }
+
+        window.addEventListener(
+            'alpine:init',
+            () => Alpine.data('{$code}PaymentForm', {$code}PaymentForm),
+            {once: true}
+        );
+    })();
+JS;
+?>
+<script><?= /* @noEscape */ $inlineScript ?></script>
+<?php $hyvaCsp->registerInlineScript() ?>
+
+<?php $inlineStyle = <<<CSS
+    html:not(.{$code}-available) #payment-method-option-{$code}.inactive {
+        display: none;
+    }
+
+    .authnetcim-wallet-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 350px;
+        width: 100%;
+    }
+
+    .authnetcim-wallet-buttons.disabled {
+        opacity: .6;
+        pointer-events: none;
+    }
+
+    .authnetcim-wallet-button {
+        height: 44px;
+        width: 100%;
+    }
+
+    .authnetcim-wallet-button apple-pay-button {
+        --apple-pay-button-width: 100%;
+        --apple-pay-button-height: 44px;
+        --apple-pay-button-border-radius: 4px;
+        display: block;
+    }
+CSS;
+?>
+<?php if (isset($secureRenderer) && $secureRenderer instanceof SecureHtmlRenderer): ?>
+    <?= /* @noEscape */ $secureRenderer->renderTag('style', [], $inlineStyle, false) ?>
+<?php else: ?>
+    <style><?= /* @noEscape */ $inlineStyle ?></style>
+<?php endif; ?>

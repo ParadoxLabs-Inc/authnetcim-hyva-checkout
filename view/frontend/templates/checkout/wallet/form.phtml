@@ -1,0 +1,64 @@
+<?php declare(strict_types=1);
+
+/**
+ * Copyright © 2023-present ParadoxLabs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Need help? Try our knowledgebase and support system:
+ *
+ * @link https://support.paradoxlabs.com
+ */
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+use ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimWallet;
+use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\WalletConfig;
+
+/** @var Template $block */
+/** @var AuthnetcimWallet $magewire */
+/** @var Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
+
+$walletConfig = $viewModels->require(WalletConfig::class);
+$code = $escaper->escapeHtmlAttr($walletConfig->getMethodCode());
+?>
+<div class="<?= /* @noEscape */ $code ?>">
+    <?php if ($walletConfig->isEnabled()): ?>
+        <div x-data="<?= /* @noEscape */ $code ?>PaymentForm" x-init="initForm">
+            <p x-show="isLoading" x-cloak class="text-secondary text-sm">
+                <?= $escaper->escapeHtml(__('Loading payment options...')) ?>
+            </p>
+
+            <p x-show="isUnavailable" x-cloak class="message warning">
+                <?= $escaper->escapeHtml(
+                    __('Apple Pay and Google Pay are not available on this device or browser.')
+                    . ' ' . __('Please choose another payment method.')
+                ) ?>
+            </p>
+
+            <p x-show="showTermsNotice" x-cloak class="text-secondary text-sm">
+                <?= $escaper->escapeHtml(__('Please accept the %1 to complete payment.', __('Terms and Conditions'))) ?>
+            </p>
+
+            <div x-show="showButtons"
+                 x-cloak
+                 class="authnetcim-wallet-buttons"
+                 :class="getButtonsClass"
+                 x-ref="buttons"
+                 wire:ignore
+            ></div>
+        </div>
+    <?php endif; ?>
+</div>

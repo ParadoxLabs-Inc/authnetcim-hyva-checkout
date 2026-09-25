@@ -31,6 +31,13 @@
                     </argument>
                 </arguments>
             </block>
+
+            <block name="checkout.payment.method.authnetcim_wallet" as="authnetcim_wallet" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/wallet/form.phtml" ifconfig="payment/authnetcim_wallet/active">
+                <arguments>
+                    <argument name="magewire" xsi:type="object">\ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimWallet</argument>
+                    <argument name="method_code" xsi:type="string">authnetcim_wallet</argument>
+                </arguments>
+            </block>
         </referenceBlock>
         <referenceContainer name="magewire.plugin.scripts">
             <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="script-authnetcim" ifconfig="payment/authnetcim/active">
@@ -49,6 +56,12 @@
                     <argument name="form_template" xsi:type="array">
                         <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml</item>
                     </argument>
+                </arguments>
+            </block>
+
+            <block name="script-authnetcim_wallet" template="ParadoxLabs_AuthnetcimHyvaCheckout::checkout/wallet/scripts.phtml" ifconfig="payment/authnetcim_wallet/active">
+                <arguments>
+                    <argument name="method_code" xsi:type="string">authnetcim_wallet</argument>
                 </arguments>
             </block>
         </referenceContainer>
