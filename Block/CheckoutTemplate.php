@@ -17,6 +17,7 @@ use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\View\Element\Template;
 use Magento\Framework\View\Element\Template\Context;
 use Override;
+use ParadoxLabs\Authnetcim\Model\Ach\ConfigProvider as AchConfigProvider;
 use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
 use ParadoxLabs\TokenBase\Gateway\Validator\CreditCard\Types;
@@ -29,6 +30,8 @@ class CheckoutTemplate extends Template
      * @param Context $context
      * @param PaymentForm $paymentForm
      * @param ConfigProvider $configProvider
+     * @param Types $ccTypes
+     * @param AchConfigProvider $achConfigProvider
      * @param array $data
      */
     public function __construct(
@@ -36,6 +39,7 @@ class CheckoutTemplate extends Template
         protected readonly PaymentForm $paymentForm,
         protected readonly ConfigProvider $configProvider,
         protected readonly Types $ccTypes,
+        protected readonly AchConfigProvider $achConfigProvider,
         array $data = []
     ) {
         parent::__construct($context, $data);
@@ -81,7 +85,13 @@ class CheckoutTemplate extends Template
      */
     public function getConfig(): array
     {
-        $config = $this->configProvider->getConfig();
+        // Each method's config comes from its own provider; the CC provider only emits the CC key, which
+        // left the eCheck form without selectedCard/defaultSaveCard.
+        $configProvider = $this->getMethodCode() === AchConfigProvider::CODE
+            ? $this->achConfigProvider
+            : $this->configProvider;
+
+        $config = $configProvider->getConfig();
 
         return $config['payment'][ $this->getMethodCode() ] ?? [];
     }

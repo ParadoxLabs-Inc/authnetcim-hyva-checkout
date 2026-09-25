@@ -95,8 +95,8 @@ $inlineScript = <<<JS
                 }
 
                 this.config = JSON.parse(this.\$el.dataset.config);
-                this.selectedCard = this.config.selectedCard;
-                this.payment.card_id = this.config.selectedCard;
+                this.selectedCard = this.config.selectedCard || '';
+                this.payment.card_id = this.selectedCard;
                 this.payment.save = this.config.defaultSaveCard;
 
                 // Store bound refs globally and remove-before-add: if Magewire replaces the root
@@ -415,7 +415,7 @@ $inlineScript = <<<JS
             setCcCid() {return this.payment.cc_cid = this.\$el.value},
             setCcExp() {return this.payment.cc_exp = this.\$el.value},
             setCcNumber() {return this.payment.cc_number = this.\$el.value},
-            setSave() {return this.payment.save = this.\$el.value ? 1 : 0},
+            setSave() {return this.payment.save = this.\$el.checked ? 1 : 0},
             setSelectedCard() {return this.selectedCard = this.\$el.value},
             showCcType() {return this.payment.cc_type},
             showStoredCards() {return Object.keys(this.storedCards).length > 0},
