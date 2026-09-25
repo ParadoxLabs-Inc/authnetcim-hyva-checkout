@@ -2,6 +2,8 @@
 
 ## 3.1.1 - Unreleased
 
+- Fixed My Payment Options showing no add/edit form for the credit card and eCheck methods (the Hyva form
+  block collided with the Luma form block's layout alias and was dropped).
 - Fixed the Accept.js "Save for next time" checkbox saving the card even when unchecked.
 - Fixed the eCheck method showing the "only supports Accept Hosted" notice, and listing credit cards, when the
   credit card method uses Accept.js: payment forms shared one cached form block across methods.
