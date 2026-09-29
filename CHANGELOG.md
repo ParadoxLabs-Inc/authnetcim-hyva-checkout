@@ -1,6 +1,6 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
-## 3.1.1 - Unreleased
+## 3.1.1 - Sep 29, 2026
 
 - Fixed My Payment Options showing no add/edit form for the credit card and eCheck methods (the Hyva form
   block collided with the Luma form block's layout alias and was dropped).
