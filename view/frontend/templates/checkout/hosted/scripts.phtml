@@ -40,6 +40,10 @@ $inlineScript = <<<JS
                     window.dispatchEvent(
                         new CustomEvent('checkout:validate:{$code}', {detail: {resolve, reject}})
                     );
+
+                    // A live form resolves synchronously above. With none (e.g. the form type
+                    // misconfiguration notice is showing), fail validation rather than hang.
+                    resolve(false);
                 });
             }
         );
@@ -76,8 +80,8 @@ $inlineScript = <<<JS
                 }
 
                 this.config = JSON.parse(this.\$el.dataset.config);
-                this.selectedCard = this.config.selectedCard;
-                this.payment.card_id = this.config.selectedCard;
+                this.selectedCard = this.config.selectedCard || '';
+                this.payment.card_id = this.selectedCard;
                 this.payment.save = this.config.defaultSaveCard;
 
                 // Store bound refs globally and remove-before-add: if Magewire replaces the root
@@ -108,14 +112,26 @@ $inlineScript = <<<JS
 
                 this.\$watch('selectedCard', this.changeSelectedCard.bind(this));
 
+                // Magewire 1 hooks cannot be unregistered, so register the terms hook once per
+                // method and route it to the current instance only. A per-instance hook leaked on
+                // every re-init, and kept driving detached instances (after switching methods)
+                // into \$wire calls for a component no longer on the page.
+                listeners.instance = this;
+
                 if (document.querySelectorAll('[wire\\\\:id=checkout\\\\.terms-conditions]').length) {
                     this.evaluateTerms();
 
-                    Magewire.hook('message.processed', (message, component) => {
-                        if (component.id === 'checkout.terms-conditions') {
-                            this.evaluateTerms();
-                        }
-                    });
+                    if (!listeners.termsHook) {
+                        listeners.termsHook = true;
+
+                        Magewire.hook('message.processed', (message, component) => {
+                            const instance = window['{$code}Listeners'].instance;
+
+                            if (component.id === 'checkout.terms-conditions' && instance && instance.isLive()) {
+                                instance.evaluateTerms();
+                            }
+                        });
+                    }
                 }
 
                 this.changeSelectedCard();
@@ -145,7 +161,16 @@ $inlineScript = <<<JS
                 clearTimeout(this.timeoutReloader);
                 clearTimeout(this.timeoutCommunicator);
 
+                if (!this.isLive()) {
+                    return;
+                }
+
                 this.\$wire.call('initHostedForm');
+            },
+            isLive: function() {
+                // False once Magewire has replaced or removed this instance's root (e.g. after a
+                // payment method switch); a detached instance must never call \$wire.
+                return this.\$el.isConnected !== false;
             },
             toggleOrderButton: function(event) {
                 const method = event && event.detail
@@ -215,6 +240,11 @@ $inlineScript = <<<JS
                 }
             },
             checkCommunicator: function() {
+                // A detached instance (method switched away) has no communicator to report on.
+                if (!this.isLive()) {
+                    return;
+                }
+
                 // Fires ~20s after the iframe posts. Report a failure only when the iframe was
                 // actually loaded yet no postMessage ever arrived. Skip in every state where no
                 // communicator is expected. Truth table (return = skip the failure report):
@@ -239,7 +269,8 @@ $inlineScript = <<<JS
             handleCommunication: function(event) {
                 if (!event.data
                     || !event.data.action
-                    || this.showHostedForm === false) {
+                    || this.showHostedForm === false
+                    || !this.isLive()) {
                     return;
                 }
 
@@ -311,6 +342,10 @@ $inlineScript = <<<JS
                 }
             },
             prepareSubmit: function(event) {
+                if (!this.isLive()) {
+                    return;
+                }
+
                 let payload = Object.assign({}, this.payment);
 
                 hyvaCheckout.storage.setValue(

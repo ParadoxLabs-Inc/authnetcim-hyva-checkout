@@ -38,6 +38,20 @@ $formViewModel = $viewModels->require(PaymentForm::class);
 $formBlock = $formViewModel->getFormBlock($code);
 $method = $formBlock->getMethod();
 $image = $formBlock->getBrandingImage();
+
+// Misconfigured form type: render only the notice. The Alpine-bound form markup below would otherwise
+// initialize a hosted-form component (hosted form requests, terms hooks) for a form that cannot work.
+if ($method->getConfigData('form_type') !== ConfigProvider::FORM_HOSTED): ?>
+    <div class="<?= /* @noEscape */ $code ?>">
+        <p class="message error my-8">
+            <?= $escaper->escapeHtml(__(
+                'This payment method only supports Accept Hosted for Hyva Checkout. Please change the'
+                . ' "Payment Form Type" to "Accept Hosted" in the payment method settings.'
+            )) ?>
+        </p>
+    </div>
+    <?php return;
+endif;
 ?>
 <div class="<?= /* @noEscape */ $code ?>"
      x-data="<?= /* @noEscape */ $code ?>PaymentForm"
@@ -48,12 +62,6 @@ $image = $formBlock->getBrandingImage();
         <div class="flex justify-end mb-2">
             <img src="<?= $escaper->escapeHtmlAttr($image); ?>" alt="<?= $escaper->escapeHtmlAttr($method->getTitle()) ?>" />
         </div>
-    <?php endif; ?>
-
-    <?php if ($method->getConfigData('form_type') !== ConfigProvider::FORM_HOSTED): ?>
-        <p class="message error my-8">
-            <?= $escaper->escapeHtml(__('This payment method only supports Accept Hosted for Hyva Checkout. Please change the "Payment Form Type" to "Accept Hosted" in the payment method settings.')) ?>
-        </p>
     <?php endif; ?>
 
     <div class="field required mb-2" x-show="showStoredCards" x-cloak>

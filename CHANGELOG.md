@@ -7,6 +7,19 @@
 - Added Apple Pay and Google Pay (`authnetcim_wallet`) support on Hyva Checkout. The payment method only shows
   when a wallet is usable in the customer's browser; the order is placed from the wallet payment sheet.
 
+## 3.1.1 - Sep 29, 2026
+
+- Fixed My Payment Options showing no add/edit form for the credit card and eCheck methods (the Hyva form
+  block collided with the Luma form block's layout alias and was dropped).
+- Fixed the Accept.js "Save for next time" checkbox saving the card even when unchecked.
+- Fixed the eCheck method showing the "only supports Accept Hosted" notice, and listing credit cards, when the
+  credit card method uses Accept.js: payment forms shared one cached form block across methods.
+- Fixed the eCheck payment form reading the credit card method's config.
+- Fixed the misconfigured-form notice rendering an inert payment form behind it (Alpine CSP console warnings, and
+  place order hanging on validation).
+- Fixed the Accept Hosted form re-registering a Magewire hook on every re-init, and detached forms (after switching
+  payment methods) still reacting to terms updates and calling their removed Magewire component.
+
 ## 3.1.0 - Jul 17, 2026: Customer payment options on Hyva
 
 **Now requires ParadoxLabs_TokenBaseHyvaCheckout (`paradoxlabs/tokenbase-hyva-checkout`).**

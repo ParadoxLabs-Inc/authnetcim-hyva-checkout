@@ -3,14 +3,16 @@
     <body>
         <!-- Hyva theme: swap the Luma per-method paymentinfo templates for the shared
              TokenBaseHyvaCheckout ones, and attach the Accept Hosted payment pane. -->
-        <referenceBlock name="tokenbase_manage_authnetcim" template="ParadoxLabs_TokenBaseHyvaCheckout::customer/method.phtml"/>
+        <referenceBlock name="tokenbase_manage_authnetcim" template="ParadoxLabs_AuthnetcimHyvaCheckout::customer/method.phtml"/>
         <referenceBlock name="tokenbase_manage_authnetcim_cards" template="ParadoxLabs_TokenBaseHyvaCheckout::customer/cards.phtml"/>
         <!-- The Luma form block (Authnetcim Block\Customer\Form\Cc) swaps its own template in _toHtml
              when form_type is Accept Hosted, which would stomp a layout retemplate; replace it with
-             the plain TokenBase form block driving the shared Hyva scaffold instead. -->
+             the plain TokenBase form block driving the shared Hyva scaffold instead. The replacement
+             uses its own alias: removals apply after layout scheduling, so the Luma block still holds
+             'tokenbase_customer_method_right' when this block is attached. -->
         <referenceBlock name="tokenbase_manage_authnetcim_form" remove="true"/>
         <referenceBlock name="tokenbase_manage_authnetcim">
-            <block class="ParadoxLabs\TokenBase\Block\Customer\Form" name="tokenbase_manage_authnetcim_form_hyva" as="tokenbase_customer_method_right" template="ParadoxLabs_TokenBaseHyvaCheckout::customer/form.phtml">
+            <block class="ParadoxLabs\TokenBase\Block\Customer\Form" name="tokenbase_manage_authnetcim_form_hyva" as="tokenbase_customer_method_right_hyva" template="ParadoxLabs_TokenBaseHyvaCheckout::customer/form.phtml">
                 <block class="Magento\Framework\View\Element\Template" name="tokenbase_manage_authnetcim_form_pane" as="payment_pane" template="ParadoxLabs_AuthnetcimHyvaCheckout::customer/form/cc.phtml"/>
             </block>
         </referenceBlock>

@@ -31,9 +31,12 @@ use ParadoxLabs\TokenBase\Block\Form\Cc;
 class PaymentForm implements ArgumentInterface
 {
     /**
-     * @var Cc
+     * Form blocks by method code. This view model is shared, so a single cached block would hand the
+     * first-rendered method's form (and its config and stored cards) to every other method.
+     *
+     * @var Cc[]
      */
-    protected $formBlock;
+    protected array $formBlocks = [];
 
     /**
      * PaymentForm constructor.
@@ -68,13 +71,13 @@ class PaymentForm implements ArgumentInterface
      */
     public function getFormBlock(string $code): Cc
     {
-        if (!isset($this->formBlock)) {
-            $this->formBlock = $this->helper->getMethodFormBlock(
+        if (!isset($this->formBlocks[$code])) {
+            $this->formBlocks[$code] = $this->helper->getMethodFormBlock(
                 $this->getMethod($code),
                 $this->layout
             );
         }
 
-        return $this->formBlock;
+        return $this->formBlocks[$code];
     }
 }

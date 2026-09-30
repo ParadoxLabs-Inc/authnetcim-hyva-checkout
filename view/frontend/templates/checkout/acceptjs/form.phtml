@@ -188,7 +188,7 @@ $typeIconMap = [
                            class="cursor-pointer"
                            id="<?= /* @noEscape */ $code ?>-save"
                            name="payment[save]"
-                           :value="payment.save"
+                           :checked="getCcSave"
                            @change="setSave"
                     />
                     <label for="<?= /* @noEscape */ $code ?>-save"
