@@ -49,6 +49,7 @@ $tFailed      = $escaper->escapeJs(
 );
 $tNoAmount    = $escaper->escapeJs(__('Unable to determine the order total. Please reload and try again.'));
 $tUseButton   = $escaper->escapeJs(__('Please complete your payment with the Apple Pay or Google Pay button.'));
+$tTotalChanged = $escaper->escapeJs(__('Your order total changed. Please review your order and pay again.'));
 ?>
 <script src="<?= $escaper->escapeUrl($block->getViewFileUrl(WalletConfig::CLIENT_SCRIPT)) ?>"></script>
 <?php
@@ -59,6 +60,9 @@ $inlineScript = <<<JS
         const config = {$configJson};
         const listeners = window['{$code}Listeners'] = window['{$code}Listeners'] || {};
         let clientsPromise = null;
+        // Checkout preflights in flight. Page-level, not Alpine state: a preflight can outlive the sheet that started
+        // it (dismissed mid-check) and overlap the next one, and the Alpine instance can be replaced meanwhile.
+        let preflights = 0;
 
         /**
          * Detect the wallets usable in this browser, once per page (also preloads the wallet SDKs). The payment
@@ -161,6 +165,7 @@ $inlineScript = <<<JS
         function {$code}PaymentForm() {
             // -------------------------------------------------------------------------------------------------
             // Flow: wallet button click -> terms check -> client.pay() (synchronous, opens the sheet)
+            //   -> Apple Pay only: preflight() runs Hyva's checkout validation before the sheet can be authorized
             //   -> sheet authorized -> placeWalletOrder(walletData) -> hyvaCheckout.order.place()
             //   -> validator puts walletData into the place-order payment payload
             //   -> order:place:success / order:place:{$code}:error settles the sheet (success/failure).
@@ -249,7 +254,8 @@ $inlineScript = <<<JS
                 },
                 /**
                  * Wallet button click. Everything up to client.pay() must stay synchronous: the wallet sheet needs
-                 * the click gesture. Address/shipping validation runs in hyvaCheckout.order.place() from the sheet.
+                 * the click gesture. Checkout validation runs from the open sheet instead: in preflight() before
+                 * Apple Pay can be authorized, and again in hyvaCheckout.order.place() (the only check for Google Pay).
                  */
                 onWalletClick: function(client, event) {
                     if (event && typeof event.preventDefault === 'function') {
@@ -279,12 +285,70 @@ $inlineScript = <<<JS
                     let payment;
 
                     try {
-                        payment = client.pay({amount: amount}, this.placeWalletOrder.bind(this));
+                        payment = client.pay(
+                            {amount: amount},
+                            this.placeWalletOrder.bind(this),
+                            {beforeAuthorize: () => this.preflight(amount)}
+                        );
                     } catch (error) {
                         payment = Promise.reject(error);
                     }
 
                     payment.then(this.afterPayment.bind(this), this.handleError.bind(this));
+                },
+                /**
+                 * Check the checkout before the wallet can be authorized, without placing the order: Hyva's pending
+                 * navigation tasks (e.g. address auto-save), then every validation registered for the current step
+                 * (address forms, shipping method, terms, other evaluation results), in the order
+                 * hyvaCheckout.navigation.stepTo() uses. Failures show Hyva's own messages and field errors, so this
+                 * rejects with a handled error; the wallet then closes its sheet and handleError() unlocks.
+                 * Then it checks the total is still the one the sheet shows (approvedAmount).
+                 */
+                preflight: async function(approvedAmount) {
+                    preflights++;
+
+                    try {
+                        await hyvaCheckout.navigation.executeTasks();
+                        await hyvaCheckout.isIdle();
+
+                        // Our own validator passes during a preflight; see prepareSubmit().
+                        if (await hyvaCheckout.validation.validate() === false) {
+                            throw this.handledError('');
+                        }
+
+                        if (await this.hasTotalChanged(approvedAmount)) {
+                            hyvaCheckout.message.alert('{$tTotalChanged}');
+                            throw this.handledError('');
+                        }
+                    } catch (error) {
+                        if (error && error.handled) {
+                            throw error;
+                        }
+
+                        // hyvaCheckout.order.place() would fail on this too; stop before the customer authorizes,
+                        // with a customer-facing message instead of the raw error.
+                        console.error(error);
+                        throw new Error('{$tFailed}');
+                    } finally {
+                        preflights--;
+                    }
+                },
+                /**
+                 * Re-read the cart total from the server and compare it with the total the sheet shows. The checks
+                 * above can save an address and change tax or shipping after the sheet opened; catching that here beats
+                 * the server refusing the order after the customer authorized. A failed re-read is not treated as a
+                 * change: the server still checks the approved amount at placement.
+                 */
+                hasTotalChanged: async function(approvedAmount) {
+                    try {
+                        await this.\$wire.refreshAmount();
+
+                        return Math.abs(parseFloat(this.\$wire.get('amount')) - approvedAmount) >= 0.005;
+                    } catch (error) {
+                        console.error(error);
+
+                        return false;
+                    }
                 },
                 /**
                  * Place the order with the wallet token, from inside the wallet sheet. Resolves or rejects on the
@@ -331,6 +395,16 @@ $inlineScript = <<<JS
                  */
                 prepareSubmit: function(event) {
                     const detail = event && event.detail ? event.detail : {};
+
+                    // Preflight (the sheet is open, not yet authorized): nothing to submit yet, so pass without
+                    // storing anything. An order placement in progress always takes the regular path below.
+                    if (preflights > 0 && !this.pending) {
+                        if (detail.resolve) {
+                            detail.resolve(true);
+                        }
+
+                        return;
+                    }
 
                     if (!this.walletData || !this.pending || !this.walletData.wallet_token) {
                         if (detail.reject) {
