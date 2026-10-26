@@ -6,6 +6,8 @@
 
 - Added Apple Pay and Google Pay (`authnetcim_wallet`) support on Hyva Checkout. The payment method only shows
   when a wallet is usable in the customer's browser; the order is placed from the wallet payment sheet.
+- Apple Pay runs Hyva's checkout validation and re-checks the order total before the customer can authorize, so
+  checkout problems surface before Face ID / Touch ID instead of after.
 
 ## 3.1.1 - Sep 29, 2026
 
