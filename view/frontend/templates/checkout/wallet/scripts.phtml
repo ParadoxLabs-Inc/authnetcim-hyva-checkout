@@ -297,7 +297,8 @@ $inlineScript = <<<JS
                         this.walletData = {
                             wallet_type: String(walletData.wallet_type || ''),
                             wallet_token: String(walletData.wallet_token || ''),
-                            card_display: String(walletData.card_display || '')
+                            card_display: String(walletData.card_display || ''),
+                            wallet_amount: String(walletData.wallet_amount || '')
                         };
                         this.pending = {resolve: resolve, reject: reject};
 
@@ -347,7 +348,8 @@ $inlineScript = <<<JS
                             method: '{$code}',
                             wallet_type: this.walletData.wallet_type,
                             wallet_token: this.walletData.wallet_token,
-                            card_display: this.walletData.card_display
+                            card_display: this.walletData.card_display,
+                            wallet_amount: this.walletData.wallet_amount
                         }
                     ).then(() => {
                         if (detail.resolve) {
@@ -370,6 +372,12 @@ $inlineScript = <<<JS
                         false,
                         this.handledError(event && event.detail && event.detail.text ? event.detail.text : '')
                     );
+
+                    // The total may have changed server-side (e.g. the approved-amount check failed); re-read it so a
+                    // retry shows, and the customer approves, the current total instead of failing the same way again.
+                    Promise.resolve()
+                        .then(() => this.\$wire.refreshAmount())
+                        .catch(error => console.error(error));
                 },
                 /**
                  * Settle the pending place-order attempt once, and drop its (spent) wallet token.

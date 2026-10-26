@@ -36,15 +36,17 @@ use Throwable;
  * current here (entangled into the Alpine component) and refreshed on every checkout event that can change totals.
  * Authorize.net charges base amounts, so the sheet shows the base total in the base currency, as on Luma.
  *
- * Wallet payment data (wallet_type, wallet_token, card_display) is not set here: it goes through the place-order
- * payload and is validated and assigned by {@see WalletPlaceOrderService}.
+ * Wallet payment data (wallet_type, wallet_token, card_display, wallet_amount) is not set here: it goes through the
+ * place-order payload and is validated and assigned by {@see WalletPlaceOrderService}. If this amount is stale, the
+ * order fails Authnetcim's approved-amount check rather than charging a total other than the one shown in the sheet.
  */
 class AuthnetcimWallet extends Component implements EvaluationInterface
 {
     protected const METHOD_CODE = WalletType::METHOD_CODE;
 
     /**
-     * Same totals-changing events the Hyva price summary listens to.
+     * Same totals-changing events the Hyva price summary listens to, plus the billing-as-shipping toggle (it changes
+     * the billing address, so tax calculated by billing address can change).
      *
      * @var string[]
      */
@@ -57,6 +59,7 @@ class AuthnetcimWallet extends Component implements EvaluationInterface
         'shipping_address_activated' => 'refreshAmount',
         'billing_address_saved' => 'refreshAmount',
         'billing_address_activated' => 'refreshAmount',
+        'billing_as_shipping_address_updated' => 'refreshAmount',
     ];
 
     /* Public component properties */

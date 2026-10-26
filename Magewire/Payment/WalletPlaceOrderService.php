@@ -36,8 +36,9 @@ use ParadoxLabs\Authnetcim\Model\Wallet\WalletType;
  * Place an Apple Pay / Google Pay order from the wallet sheet.
  *
  * The storefront calls hyvaCheckout.order.place() from inside the wallet sheet callback; the wallet validator puts
- * {wallet_type, wallet_token, card_display} into the place-order payment payload, and this assigns them to the quote
- * payment through the regular assign-data observer chain.
+ * {wallet_type, wallet_token, card_display, wallet_amount} into the place-order payment payload, and this assigns
+ * them to the quote payment through the regular assign-data observer chain. wallet_amount is the total the customer
+ * approved in the wallet sheet; Authnetcim refuses the payment if the order total no longer matches it.
  *
  * Failures are reported through the order:place:authnetcim_wallet:error browser event, which the storefront waits
  * on to close the wallet sheet with a failure status, so this must never rethrow (see handleException()).
@@ -51,6 +52,7 @@ class WalletPlaceOrderService extends AbstractPlaceOrderService
         'wallet_type' => null,
         'wallet_token' => null,
         'card_display' => null,
+        'wallet_amount' => null,
     ];
 
     /**

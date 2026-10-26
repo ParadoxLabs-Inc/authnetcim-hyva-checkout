@@ -72,6 +72,9 @@ class AuthnetcimWalletTest extends TestCase
             'coupon_code_revoked',
             'shipping_address_saved',
             'billing_address_saved',
+            'billing_address_activated',
+            'shipping_address_activated',
+            'billing_as_shipping_address_updated',
         ] as $event) {
             $this->assertSame('refreshAmount', $listeners[$event] ?? null, $event);
         }

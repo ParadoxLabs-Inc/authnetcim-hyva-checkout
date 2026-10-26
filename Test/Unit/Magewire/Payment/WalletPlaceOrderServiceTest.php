@@ -55,6 +55,7 @@ class WalletPlaceOrderServiceTest extends TestCase
                 'wallet_type' => 'applepay',
                 'wallet_token' => 'eyJ0b2tlbiI6MX0=',
                 'card_display' => 'Visa 1234',
+                'wallet_amount' => '12.34',
                 'tokenbase_id' => '999',
                 'acceptjs_value' => 'evil',
             ],
@@ -68,6 +69,7 @@ class WalletPlaceOrderServiceTest extends TestCase
                     'wallet_type' => 'applepay',
                     'wallet_token' => 'eyJ0b2tlbiI6MX0=',
                     'card_display' => 'Visa 1234',
+                    'wallet_amount' => '12.34',
                 ],
             ]);
 
@@ -91,6 +93,7 @@ class WalletPlaceOrderServiceTest extends TestCase
             ],
         ]);
 
+        // A missing wallet_amount goes through empty: the Authnetcim assign observer treats it as not sent.
         $this->payment->expects($this->once())
             ->method('importData')
             ->with([
@@ -99,6 +102,7 @@ class WalletPlaceOrderServiceTest extends TestCase
                     'wallet_type' => 'googlepay',
                     'wallet_token' => 'dG9rZW4=',
                     'card_display' => '',
+                    'wallet_amount' => '',
                 ],
             ]);
 
