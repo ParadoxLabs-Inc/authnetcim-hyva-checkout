@@ -124,13 +124,23 @@ $inlineScript = <<<JS
                     if (!listeners.termsHook) {
                         listeners.termsHook = true;
 
-                        Magewire.hook('message.processed', (message, component) => {
+                        const onComponentUpdated = component => {
                             const instance = window['{$code}Listeners'].instance;
 
                             if (component.id === 'checkout.terms-conditions' && instance && instance.isLive()) {
                                 instance.evaluateTerms();
                             }
-                        });
+                        };
+
+                        // Magewire 3 (Hyva Checkout 3.x): 'commit'. Magewire 1 throws on that unknown hook
+                        // name, so fall back to its 'message.processed'.
+                        try {
+                            Magewire.hook('commit', ({component, succeed}) => {
+                                succeed(() => queueMicrotask(() => onComponentUpdated(component)));
+                            });
+                        } catch (error) {
+                            Magewire.hook('message.processed', (message, component) => onComponentUpdated(component));
+                        }
                     }
                 }
 

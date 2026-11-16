@@ -21,6 +21,10 @@
 
 namespace ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment;
 
+use Magewirephp\Magewire\Features\SupportMagewireBackwardsCompatibility\HandleBackwardsCompatibility;
+
+// Native Magewire 3 on Hyva Checkout 3.x, with or without v1bc; Magewire 1 (Checkout 1.x) ignores the attribute.
+#[HandleBackwardsCompatibility(enabled: false)]
 class AuthnetcimAch extends Authnetcim
 {
     protected const METHOD_CODE = 'authnetcim_ach';

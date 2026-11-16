@@ -11,7 +11,8 @@
 
 ## 3.2.0 - Nov 16, 2026
 
-- Added Hyva Checkout 3.x support (3.0.1+). Requires Hyva's `Hyva_CheckoutV1bc` module, enabled by default.
+- Added Hyva Checkout 3.x support (3.0.1+), native to Magewire 3; Hyva's v1bc module is not required.
+- Now requires Hyva Checkout 1.3.6 or later on the 1.x line.
 
 ## 3.1.1 - Sep 29, 2026
 
