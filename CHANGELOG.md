@@ -1,6 +1,6 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
-## 3.2.0 - Sep 25, 2026: Apple Pay and Google Pay
+## 3.3.0 - Sep 25, 2026: Apple Pay and Google Pay
 
 **Now requires ParadoxLabs_Authnetcim 6.2.**
 
@@ -9,13 +9,9 @@
 - Apple Pay runs Hyva's checkout validation and re-checks the order total before the customer can authorize, so
   checkout problems surface before Face ID / Touch ID instead of after.
 
-## 3.1.2 - Nov 16, 2026
+## 3.2.0 - Nov 16, 2026
 
-- Added Hyva Checkout 3.x compatibility. Checkout 3.x runs this module through Hyva's Checkout 1.x
-  compatibility module (`Hyva_CheckoutV1bc`), which it installs and enables by default; keep it enabled.
-  Hyva Checkout 1.3.x remains supported. On the 3.x line, 3.0.1 or later is required.
-- Fixed the payment form failing to render on Hyva Checkout 3.x (Magewire 3), which requires a component
-  template's root element outside any condition. The form now always renders one root element.
+- Added Hyva Checkout 3.x support (3.0.1+). Requires Hyva's `Hyva_CheckoutV1bc` module, enabled by default.
 
 ## 3.1.1 - Sep 29, 2026
 

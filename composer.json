@@ -16,7 +16,7 @@
         "paradoxlabs/tokenbase-hyva-checkout": "^1.0"
     },
     "type": "magento2-module",
-    "version": "3.2.0",
+    "version": "3.3.0",
     "time": "2026-09-25",
     "license": "Apache-2.0",
     "authors": [
