@@ -31,6 +31,7 @@ use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magewirephp\Magewire\Component\Form;
+use Magewirephp\Magewire\Features\SupportMagewireBackwardsCompatibility\HandleBackwardsCompatibility;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
@@ -40,6 +41,8 @@ use ParadoxLabs\TokenBase\Block\Form\Cc;
 use ParadoxLabs\TokenBase\Helper\Data;
 use Rakit\Validation\Validator;
 
+// Native Magewire 3 on Hyva Checkout 3.x, with or without v1bc; Magewire 1 (Checkout 1.x) ignores the attribute.
+#[HandleBackwardsCompatibility(enabled: false)]
 class Authnetcim extends Form implements EvaluationInterface
 {
     protected const METHOD_CODE = 'authnetcim';
@@ -136,10 +139,12 @@ class Authnetcim extends Form implements EvaluationInterface
     /**
      * Generate Accept Hosted form token
      *
+     * @param mixed ...$eventData Listener payload, unused: positional on Magewire 1, named on Magewire 3.
      * @return void
      * @see \ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function initHostedForm(): void
+    public function initHostedForm(mixed ...$eventData): void
     {
         if ($this->getMethod()->getConfigData('payment_action') === 'order') {
             $formService = $this->acceptCustomerService;

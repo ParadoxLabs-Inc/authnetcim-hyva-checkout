@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <!-- Payment JS: rendered with the checkout API on Hyva Checkout 1.3.6+ and 3.x, with or without v1bc. -->
+        <referenceContainer name="hyva.checkout.api-v1.payment-methods">
+            <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="script-authnetcim" ifconfig="payment/authnetcim/active">
+                <arguments>
+                    <argument name="method_code" xsi:type="string">authnetcim</argument>
+                    <argument name="form_template" xsi:type="array">
+                        <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml</item>
+                        <item name="acceptjs" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/acceptjs/scripts.phtml</item>
+                    </argument>
+                </arguments>
+            </block>
+
+            <block class="ParadoxLabs\AuthnetcimHyvaCheckout\Block\CheckoutTemplate" name="script-authnetcim_ach" ifconfig="payment/authnetcim_ach/active">
+                <arguments>
+                    <argument name="method_code" xsi:type="string">authnetcim_ach</argument>
+                    <argument name="form_template" xsi:type="array">
+                        <item name="hosted" xsi:type="string">ParadoxLabs_AuthnetcimHyvaCheckout::checkout/hosted/scripts.phtml</item>
+                    </argument>
+                </arguments>
+            </block>
+        </referenceContainer>
+    </body>
+</page>
