@@ -26,6 +26,7 @@ use Hyva\Checkout\Model\Magewire\Component\EvaluationResultFactory;
 use Hyva\Checkout\Model\Magewire\Component\EvaluationResultInterface;
 use Magento\Checkout\Model\Session as CheckoutSession;
 use Magewirephp\Magewire\Component;
+use Magewirephp\Magewire\Features\SupportMagewireBackwardsCompatibility\HandleBackwardsCompatibility;
 use ParadoxLabs\Authnetcim\Model\Wallet\WalletType;
 use Throwable;
 
@@ -39,7 +40,10 @@ use Throwable;
  * Wallet payment data (wallet_type, wallet_token, card_display, wallet_amount) is not set here: it goes through the
  * place-order payload and is validated and assigned by {@see WalletPlaceOrderService}. If this amount is stale, the
  * order fails Authnetcim's approved-amount check rather than charging a total other than the one shown in the sheet.
+ *
+ * Native Magewire 3 on Hyva Checkout 3.x, with or without v1bc; Magewire 1 (Checkout 1.x) ignores the attribute.
  */
+#[HandleBackwardsCompatibility(enabled: false)]
 class AuthnetcimWallet extends Component implements EvaluationInterface
 {
     protected const METHOD_CODE = WalletType::METHOD_CODE;
@@ -85,9 +89,11 @@ class AuthnetcimWallet extends Component implements EvaluationInterface
     /**
      * Load the quote's current base grand total for the wallet sheet.
      *
+     * @param mixed ...$eventData Listener payload, unused: positional on Magewire 1, named on Magewire 3.
      * @return void
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function refreshAmount(): void
+    public function refreshAmount(mixed ...$eventData): void
     {
         try {
             $this->amount = round((float)$this->checkoutSession->getQuote()->getBaseGrandTotal(), 2);

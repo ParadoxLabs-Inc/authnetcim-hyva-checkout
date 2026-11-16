@@ -63,6 +63,23 @@ class AuthnetcimWalletTest extends TestCase
         $this->assertSame(0.0, $this->component->amount);
     }
 
+    /**
+     * refreshAmount is a listener: Magewire 3 passes the event payload as named arguments
+     * (payment_method_selected sends `method:`), Magewire 1 as positional ones.
+     */
+    public function testRefreshAmountAcceptsListenerPayloadsOfBothMagewireVersions(): void
+    {
+        $this->checkoutSession->method('getQuote')->willThrowException(new RuntimeException('no session'));
+
+        $this->component->amount = 10.0;
+        $this->component->refreshAmount(method: 'authnetcim_wallet');
+        $this->assertSame(0.0, $this->component->amount);
+
+        $this->component->amount = 10.0;
+        $this->component->refreshAmount(['method' => 'authnetcim_wallet']);
+        $this->assertSame(0.0, $this->component->amount);
+    }
+
     public function testListensToEveryTotalsChangingEvent(): void
     {
         // Read the declared map: Magewire 3's getListeners() (Hyva Checkout 3.x) resolves through the ObjectManager.

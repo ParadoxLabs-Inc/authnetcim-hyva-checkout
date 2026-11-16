@@ -136,7 +136,14 @@ $inlineScript = <<<JS
             }
 
             listeners.orderButtonHooked = true;
-            window.Magewire.hook('message.processed', () => syncOrderButton());
+
+            // Magewire 3 (Hyva Checkout 3.x): 'commit'. Magewire 1 throws on that unknown hook name, so fall back to
+            // its 'message.processed'.
+            try {
+                window.Magewire.hook('commit', ({succeed}) => succeed(() => queueMicrotask(() => syncOrderButton())));
+            } catch (error) {
+                window.Magewire.hook('message.processed', () => syncOrderButton());
+            }
         }
 
         // Page-level (not per Alpine instance), so the button is restored even after the wallet form is removed.
@@ -146,7 +153,11 @@ $inlineScript = <<<JS
         );
         window.addEventListener('order:place:error', () => syncOrderButton());
         window.addEventListener('order:place:{$code}:error', () => syncOrderButton());
-        window.addEventListener('magewire:available', hookMagewire);
+        // Magewire may load after this script. Magewire 3 announces itself with 'magewire:init' (on document, not
+        // bubbling); Magewire 1 has loaded by DOMContentLoaded. Its 'magewire:available' is avoided: Hyva Checkout 3.x
+        // reports listeners of it as Magewire 1 code.
+        document.addEventListener('magewire:init', hookMagewire, {once: true});
+        document.addEventListener('DOMContentLoaded', hookMagewire, {once: true});
         hookMagewire();
 
         window.addEventListener('checkout:init:validation', event => {
@@ -207,11 +218,20 @@ $inlineScript = <<<JS
                         if (!listeners.termsHooked) {
                             listeners.termsHooked = true;
 
-                            Magewire.hook('message.processed', (message, component) => {
+                            const onComponentUpdated = component => {
                                 if (component.id === 'checkout.terms-conditions' && listeners.terms) {
                                     listeners.terms();
                                 }
-                            });
+                            };
+
+                            // Magewire 3: 'commit'; Magewire 1 throws on that name, so fall back to 'message.processed'.
+                            try {
+                                Magewire.hook('commit', ({component, succeed}) => {
+                                    succeed(() => queueMicrotask(() => onComponentUpdated(component)));
+                                });
+                            } catch (error) {
+                                Magewire.hook('message.processed', (message, component) => onComponentUpdated(component));
+                            }
                         }
                     }
 
