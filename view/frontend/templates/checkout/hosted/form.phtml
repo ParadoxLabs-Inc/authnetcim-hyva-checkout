@@ -41,23 +41,24 @@ $image = $formBlock->getBrandingImage();
 
 // Misconfigured form type: render only the notice. The Alpine-bound form markup below would otherwise
 // initialize a hosted-form component (hosted form requests, terms hooks) for a form that cannot work.
-if ($method->getConfigData('form_type') !== ConfigProvider::FORM_HOSTED): ?>
-    <div class="<?= /* @noEscape */ $code ?>">
-        <p class="message error my-8">
-            <?= $escaper->escapeHtml(__(
-                'This payment method only supports Accept Hosted for Hyva Checkout. Please change the'
-                . ' "Payment Form Type" to "Accept Hosted" in the payment method settings.'
-            )) ?>
-        </p>
-    </div>
-    <?php return;
-endif;
+// Magewire 3 (Hyva Checkout 3.x) needs the root tag outside any condition, so branch inside it.
+$isHosted = $method->getConfigData('form_type') === ConfigProvider::FORM_HOSTED;
 ?>
 <div class="<?= /* @noEscape */ $code ?>"
+    <?php if ($isHosted): ?>
      x-data="<?= /* @noEscape */ $code ?>PaymentForm"
      x-init="initForm"
      data-config="<?= $escaper->escapeHtmlAttr(json_encode($block->getConfig())) ?>"
+    <?php endif; ?>
 >
+    <?php if (!$isHosted): ?>
+    <p class="message error my-8">
+        <?= $escaper->escapeHtml(__(
+            'This payment method only supports Accept Hosted for Hyva Checkout. Please change the'
+            . ' "Payment Form Type" to "Accept Hosted" in the payment method settings.'
+        )) ?>
+    </p>
+    <?php else: ?>
     <?php if ($image): ?>
         <div class="flex justify-end mb-2">
             <img src="<?= $escaper->escapeHtmlAttr($image); ?>" alt="<?= $escaper->escapeHtmlAttr($method->getTitle()) ?>" />
@@ -130,4 +131,5 @@ endif;
     <?php endif; ?>
 
     <?= /* @noEscape */ $block->getChildHtml(); ?>
+    <?php endif; ?>
 </div>
