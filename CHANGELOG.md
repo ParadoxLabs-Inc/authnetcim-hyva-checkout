@@ -1,5 +1,9 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 3.2.0 - Nov 16, 2026
+
+- Added Hyva Checkout 3.x support (3.0.1+). Requires Hyva's `Hyva_CheckoutV1bc` module, enabled by default.
+
 ## 3.1.1 - Sep 29, 2026
 
 - Fixed My Payment Options showing no add/edit form for the credit card and eCheck methods (the Hyva form
