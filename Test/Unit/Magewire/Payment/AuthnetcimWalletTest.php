@@ -12,6 +12,7 @@ use Magento\Quote\Model\Quote;
 use ParadoxLabs\AuthnetcimHyvaCheckout\Magewire\Payment\AuthnetcimWallet;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 use RuntimeException;
 
 /**
@@ -64,7 +65,8 @@ class AuthnetcimWalletTest extends TestCase
 
     public function testListensToEveryTotalsChangingEvent(): void
     {
-        $listeners = $this->component->getListeners();
+        // Read the declared map: Magewire 3's getListeners() (Hyva Checkout 3.x) resolves through the ObjectManager.
+        $listeners = (new ReflectionProperty(AuthnetcimWallet::class, 'listeners'))->getValue($this->component);
 
         foreach ([
             'shipping_method_selected',
