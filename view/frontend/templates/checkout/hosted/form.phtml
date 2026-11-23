@@ -91,7 +91,9 @@ $isHosted = $method->getConfigData('form_type') === ConfigProvider::FORM_HOSTED;
          x-show="showHostedForm"
          wire:ignore
     >
-        <iframe src="about:blank" id="<?= /* @noEscape */ $code ?>_iframe" name="<?= /* @noEscape */ $code ?>_iframe" class="w-full" x-show="hideTermsNotice" x-cloak></iframe>
+        <div x-show="hideTermsNotice" x-cloak>
+            <iframe src="about:blank" id="<?= /* @noEscape */ $code ?>_iframe" name="<?= /* @noEscape */ $code ?>_iframe" class="w-full"></iframe>
+        </div>
         <p x-show="showTermsNotice" x-cloak class="text-secondary p-4"><?= $escaper->escapeHtml(__('Please accept the %1 to complete payment.', __('Terms and Conditions'))) ?></p>
     </div>
 
