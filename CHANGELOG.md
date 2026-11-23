@@ -11,6 +11,7 @@
 
 - Added Hyva Checkout 3.x support (3.0.1+), native to Magewire 3; Hyva's v1bc module is not required.
 - Now requires Hyva Checkout 1.3.6 or later on the 1.x line.
+- Fixed the credit card form not loading on Hyva Checkout 3 (Alpine's CSP build rejects directives on iframes).
 
 ## 3.1.1 - Sep 29, 2026
 
