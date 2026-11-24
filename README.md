@@ -14,7 +14,10 @@ Requirements
 
 * Adobe Commerce / Magento Open Source 2.4.6 – 2.4.9 (or equivalent version of Adobe Commerce Cloud), or Mage-OS 2.0 – 3.0
 * PHP 8.1, 8.2, 8.3, 8.4, or 8.5
-* Hyva Checkout (separate product and license)
+* Hyva Checkout (separate product and license), `hyva-themes/magento2-hyva-checkout` 1.3.6 or later 1.3.x, or 3.0.1 and later
+* Hyva Checkout 3.0.1 on a store with store codes in its URLs, or installed in a subdirectory, also needs the
+  Magewire fix from [magewirephp/magewire#324](https://github.com/magewirephp/magewire/pull/324) (not in
+  Magewire 3.7.2); without it, every checkout update falls back to the default store.
 
 Features
 ========
@@ -30,7 +33,6 @@ Limitations
 ===========
 
 * Requires Accept Hosted or Accept.js payment form (does not support untokenized inline credit card entry)
-* Does not yet implement the 'My Payment Options' customer account interface for stored card management
 
 Installation and Usage
 ======================

@@ -7,7 +7,7 @@
 - Added Apple Pay and Google Pay (`authnetcim_wallet`) on Hyva Checkout. The method shows only when a wallet is
   usable in the customer's browser, and the order is placed from the wallet payment sheet after checkout validation.
 
-## 3.2.0 - Nov 16, 2026
+## 3.2.0 - Nov 23, 2026
 
 - Added Hyva Checkout 3.x support (3.0.1+), native to Magewire 3; Hyva's v1bc module is not required.
 - Now requires Hyva Checkout 1.3.6 or later on the 1.x line.
