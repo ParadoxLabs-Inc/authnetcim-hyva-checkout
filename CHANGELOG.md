@@ -1,5 +1,11 @@
 # ParadoxLabs_AuthnetcimHyvaCheckout Changelog
 
+## 3.2.1 - Nov 25, 2026
+
+- Fixed stored cards disappearing from the Payment Information dropdown after saving a new or edited billing
+  address on Hyva Checkout 3, leaving only "Add new card" until the next checkout update. The console showed
+  "Magewire entangle: property ['storedCards'] cannot be found on component ['checkout.payment.methods']".
+
 ## 3.2.0 - Nov 23, 2026
 
 - Added Hyva Checkout 3.x support (3.0.1+), native to Magewire 3; Hyva's v1bc module is not required.
