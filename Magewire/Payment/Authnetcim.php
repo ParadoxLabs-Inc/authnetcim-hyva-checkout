@@ -32,6 +32,7 @@ use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magewirephp\Magewire\Component\Form;
 use Magewirephp\Magewire\Features\SupportMagewireBackwardsCompatibility\HandleBackwardsCompatibility;
+use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
@@ -53,18 +54,20 @@ class Authnetcim extends Form implements EvaluationInterface
     protected $loader = [
         'billing_address_activated' => 'Loading payment form',
         'billing_address_saved' => 'Loading payment form',
-        'billing_address_submitted' => 'Loading payment form',
         'getNewCard' => 'Updating payment data',
         // 'initHostedForm' => 'Loading payment form',
     ];
 
     /**
+     * Not billing_address_submitted: Hyvä always sends it alongside billing_address_saved, and
+     * listening to it queues this component ahead of checkout.payment.methods in the same update,
+     * whose re-render then replaces this component's root with a copy lacking wire:id (Magewire 3).
+     *
      * @var string[]
      */
     protected $listeners = [
         'billing_address_activated' => 'initHostedForm',
         'billing_address_saved' => 'initHostedForm',
-        'billing_address_submitted' => 'initHostedForm',
     ];
 
     /* Public component properties */
@@ -146,6 +149,12 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     public function initHostedForm(mixed ...$eventData): void
     {
+        // Accept.js renders no hosted form; skip requesting a token it would never use.
+        if (($this->getMethod()->getConfigData('form_type') ?: ConfigProvider::FORM_HOSTED)
+            !== ConfigProvider::FORM_HOSTED) {
+            return;
+        }
+
         if ($this->getMethod()->getConfigData('payment_action') === 'order') {
             $formService = $this->acceptCustomerService;
         } else {

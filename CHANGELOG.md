@@ -7,6 +7,14 @@
 - Added Apple Pay and Google Pay (`authnetcim_wallet`) on Hyva Checkout. The method shows only when a wallet is
   usable in the customer's browser, and the order is placed from the wallet payment sheet after checkout validation.
 
+## 3.2.1 - Nov 25, 2026
+
+- Fixed stored cards disappearing from the Payment Information dropdown after saving a new or edited billing
+  address on Hyva Checkout 3, leaving only "Add new card" until the next checkout update. The console showed
+  "Magewire entangle: property ['storedCards'] cannot be found on component ['checkout.payment.methods']".
+- Fixed the Accept.js credit card form requesting an unused Accept Hosted form token from Authorize.Net on every
+  billing address change.
+
 ## 3.2.0 - Nov 23, 2026
 
 - Added Hyva Checkout 3.x support (3.0.1+), native to Magewire 3; Hyva's v1bc module is not required.
