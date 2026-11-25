@@ -5,6 +5,8 @@
 - Fixed stored cards disappearing from the Payment Information dropdown after saving a new or edited billing
   address on Hyva Checkout 3, leaving only "Add new card" until the next checkout update. The console showed
   "Magewire entangle: property ['storedCards'] cannot be found on component ['checkout.payment.methods']".
+- Fixed the Accept.js credit card form requesting an unused Accept Hosted form token from Authorize.Net on every
+  billing address change.
 
 ## 3.2.0 - Nov 23, 2026
 

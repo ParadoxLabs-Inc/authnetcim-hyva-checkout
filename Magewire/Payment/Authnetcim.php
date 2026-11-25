@@ -32,6 +32,7 @@ use Magento\Payment\Model\MethodInterface;
 use Magento\Quote\Api\Data\CartInterface;
 use Magewirephp\Magewire\Component\Form;
 use Magewirephp\Magewire\Features\SupportMagewireBackwardsCompatibility\HandleBackwardsCompatibility;
+use ParadoxLabs\Authnetcim\Model\ConfigProvider;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptCustomer\FrontendRequest as AcceptCustomerService;
 use ParadoxLabs\Authnetcim\Model\Service\AcceptHosted\FrontendRequest as AcceptHostedService;
 use ParadoxLabs\AuthnetcimHyvaCheckout\ViewModel\PaymentForm;
@@ -148,6 +149,12 @@ class Authnetcim extends Form implements EvaluationInterface
      */
     public function initHostedForm(mixed ...$eventData): void
     {
+        // Accept.js renders no hosted form; skip requesting a token it would never use.
+        if (($this->getMethod()->getConfigData('form_type') ?: ConfigProvider::FORM_HOSTED)
+            !== ConfigProvider::FORM_HOSTED) {
+            return;
+        }
+
         if ($this->getMethod()->getConfigData('payment_action') === 'order') {
             $formService = $this->acceptCustomerService;
         } else {
